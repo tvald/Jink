@@ -1,0 +1,3 @@
+#!/bin/bash
+export PYTHONPATH=/mit/tvald/project/jink/python:/mit/tvald/lib/python:$PYTHONPATH
+python -m jink $@
