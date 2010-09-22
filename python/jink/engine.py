@@ -18,8 +18,8 @@ class Engine(object):
       }
     
     exec self.source.cdata() in self.config
-    if 'TARGET' not in self.config:
-      raise Exception('fatal: no TARGET specified in site-config')
+    #if 'TARGET' not in self.config:
+    #  raise Exception('fatal: no TARGET specified in site-config')
     self.source.configure(self.config)
     self.sink.configure(self.config)
     

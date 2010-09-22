@@ -3,8 +3,9 @@ import os, os.path
 
 
 class SourceFS(object):
-  def __init__(self, root):
+  def __init__(self, root, relpath):
     self.root = root
+    self.relpath = relpath
   
   def cdata(self):
     with open(os.path.join(self.root,'site-config')) as f:
@@ -26,9 +27,15 @@ class SourceFS(object):
       return f.read()
   
   def configure(self, config):
-    config['TARGET'] = os.path.join(self.root,config['TARGET'])
+    config['TARGET'] = os.path.abspath(os.path.join(self.root,config['TARGET']))
 
+  def locate(self, target):
+    path = os.path.join(self.relpath,target)
+    if not path.startswith('content/'):
+      raise Exception("fatal: can't build target '%s' outside of content directory" % path)
+    return target[len('content/'):]
 
+  
 class SinkFS(object):
   def __init__(self):
     pass

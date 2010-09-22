@@ -36,7 +36,7 @@ def build(*targets):
   """Build a set of targets"""
   CreateEngine()
   for x in targets:
-    engine.build(engine.source.x)
+    engine.build(engine.source.locate(x))
 
 
 @command
@@ -130,19 +130,21 @@ def CreateEngine():
     sink = SinkFS()
   
   from jink.fs import SourceFS
-  source = SourceFS(FindRepo())
+  source = SourceFS(*FindRepo())
   
   engine = Engine(source, sink)
 
 
 def FindRepo():
-  cwd = os.getcwd()
+  cwd = os.path.abspath(os.getcwd())
+  fixup = cwd
   while not os.path.exists(os.path.join(cwd,'.jink')):
     t = os.path.dirname(cwd)
+    b = os.path.basename(cwd)
     if t == cwd: # reached fs root
       raise Exception('fatal: not a jink repository')
     cwd = t
-  return cwd
+  return (cwd, fixup != cwd and fixup[:len(cwd)+1] or '')
 
 
 #TODO: hooks (auto-stage with a post-build hook)
