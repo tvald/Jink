@@ -33,7 +33,7 @@ class SourceFS(object):
     path = os.path.join(self.relpath,target)
     if not path.startswith('content/'):
       raise Exception("fatal: can't build target '%s' outside of content directory" % path)
-    return target[len('content/'):]
+    return path[len('content/'):]
 
   
 class SinkFS(object):

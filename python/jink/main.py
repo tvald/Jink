@@ -144,7 +144,7 @@ def FindRepo():
     if t == cwd: # reached fs root
       raise Exception('fatal: not a jink repository')
     cwd = t
-  return (cwd, fixup != cwd and fixup[:len(cwd)+1] or '')
+  return (cwd, fixup != cwd and fixup[len(cwd)+1:] or '')
 
 
 #TODO: hooks (auto-stage with a post-build hook)
