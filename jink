@@ -1,3 +1,4 @@
 #!/bin/bash
-export PYTHONPATH=/mit/tvald/project/jink/python:/mit/tvald/lib/python:$PYTHONPATH
-python -m jink $@
+me=$(readlink -f $0)
+export PYTHONPATH=$(dirname $me)/python:$PYTHONPATH
+python -m jink.run $@
