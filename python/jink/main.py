@@ -78,7 +78,7 @@ def help(cmd=None):
 flags = []
 args  = []
 
-def main(*sysargs):
+def dispatch(*sysargs):
   """ Dispatches a jink command. """
   global flags, args
   

@@ -1,4 +1,4 @@
 #!/bin/bash
 me=$(readlink -f $0)
 export PYTHONPATH=$(dirname $me)/python:$PYTHONPATH
-python -m jink.run $@
+python -c "import sys,jink.main;jink.main.dispatch(*sys.argv[1:])" $@
