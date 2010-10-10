@@ -1,5 +1,5 @@
 """
-jink   Git-based template build-out
+jink   Jinja2-based templating build system
 Usage: jink COMMAND [arguments]
 """
 from __future__ import with_statement, absolute_import
@@ -41,7 +41,7 @@ def build(*targets):
 
 @command
 def update():
-  """Rebuild changes based on the most recent diff"""
+  """Rebuild based on changes since the last build"""
   raise Exception("Not yet implemented")
 
 
@@ -79,25 +79,33 @@ flags = []
 args  = []
 
 def main(*sysargs):
+  """ Dispatches a jink command. """
   global flags, args
+  
+  # dirt-simple argument processing
   for x in sysargs:
+    # all flags are assumed to be of the form '-flag'
     if x.startswith('-'):
       flags.append(x[1:])
+    # everything else is an argument
     else:
       args.append(x)
   
+  # we must have a command to dispatch
   if len(args) == 0:
     die(__doc__)
   
-  # sanity checks prior to dispatch
   cmd = args[0]
   args = args[1:]
   
+  # check for proper arguments prior to dispatch
   c = cmdset.get(cmd,False) or die('Unknown command: %s' % cmd)
   l = len(args)
   
-  mx = c.func_code.co_argcount
-  mm = mx - len(c.func_defaults or [])
+  mx = c.func_code.co_argcount         # maximum argument count
+  mm = mx - len(c.func_defaults or []) # minimum argument count
+  
+  # "co_flags & 0x04" checks whether the varargs flag is set
   if l < mm or (l > mx and not (c.func_code.co_flags & 0x04)):
     help(cmd)
     die('')
@@ -105,23 +113,27 @@ def main(*sysargs):
   # dispatch the command
   try:
     c(*args)
+  # DEBUG (python exception handling sucks...)
   except:
     raise
+  # !DEBUG
   #except Exception, e:
   #  die(str(e))
 
 
 def die(msg):
+  """ Displays an error message and then exits. """
   import sys
   print msg
   sys.exit(1)
 
 
 def CreateEngine():
+  """ Creates the Jink engine which controls rendering. """
   global engine
   from jink.engine import Engine
   
-  # just testing
+  # use the test (dummy) data sink
   if 't' in flags:
     from jink.engine import TestSink
     sink = TestSink('v' in flags)
@@ -129,6 +141,8 @@ def CreateEngine():
     from jink.fs import SinkFS
     sink = SinkFS()
   
+  # for now, filesystem is the only supported data source
+  # eventually we'll support git, and maybe others
   from jink.fs import SourceFS
   source = SourceFS(*FindRepo())
   
@@ -136,15 +150,16 @@ def CreateEngine():
 
 
 def FindRepo():
-  cwd = os.path.abspath(os.getcwd())
-  fixup = cwd
-  while not os.path.exists(os.path.join(cwd,'.jink')):
-    t = os.path.dirname(cwd)
-    b = os.path.basename(cwd)
-    if t == cwd: # reached fs root
+  """ Search up the filesystem hierarchy to locate the repository root. """
+  root = os.path.abspath(os.getcwd())
+  fixup = root
+  while not os.path.exists(os.path.join(root,'.jink')):
+    next = os.path.dirname(root)
+    if next == root: # reached fs root
       raise Exception('fatal: not a jink repository')
-    cwd = t
-  return (cwd, fixup != cwd and fixup[len(cwd)+1:] or '')
+    root = next
+  # return the root directory, plus the relative path to the cwd
+  return (root, fixup != root and fixup[len(root)+1:] or '')
 
 
 #TODO: hooks (auto-stage with a post-build hook)
