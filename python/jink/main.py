@@ -1,6 +1,8 @@
 """
 jink   Jinja2-based templating build system
 Usage: jink COMMAND [arguments]
+
+See 'jink help' for a list of commands."
 """
 from __future__ import with_statement, absolute_import
 import os, os.path
@@ -162,6 +164,7 @@ def FindRepo():
   return (root, fixup != root and fixup[len(root)+1:] or '')
 
 
+#TODO: more environment variables for templates (path-to-root, etc.)
 #TODO: hooks (auto-stage with a post-build hook)
 #TODO: switch to FunctionLoader
 #TODO: add README to content (auto?)

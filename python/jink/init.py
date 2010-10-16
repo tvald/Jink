@@ -56,7 +56,7 @@ FILTERS = [
 MASTER_TMPL="""<!DOCTYPE HTML>
 <html>
 <head>
-<title>Jingawik demo page!</title>
+<title>Jink demo page!</title>
 </head>
 <body>
 {% block content %}
