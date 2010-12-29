@@ -38,13 +38,18 @@ def build(*targets):
   """Build a set of targets"""
   CreateEngine()
   for x in targets:
-    engine.build(engine.source.locate(x))
+    engine.build(os.path.join(relpath,x))
 
 
 @command
 def update():
   """Rebuild based on changes since the last build"""
-  raise Exception("Not yet implemented")
+  CreateEngine()
+  for x in engine.source.iter_all():
+    if max(map(lambda y: engine.source.stat(y),
+               engine.get_templates(x)+[x])) \
+           > engine.sink.stat(x):
+      engine.build(x)
 
 
 @command
@@ -77,25 +82,34 @@ def help(cmd=None):
 #############
 #   UTILS   #
 #############
-flags = []
+flags = {}
 args  = []
+flag_map = { 't':'trial-run', 'v':'verbose' }
+relpath = ''
+engine = None
 
 def dispatch(*sysargs):
   """ Dispatches a jink command. """
-  global flags, args
+  global flags, args, flag_map
   
   # dirt-simple argument processing
   for x in sysargs:
     # all flags are assumed to be of the form '-flag'
-    if x.startswith('-'):
-      flags.append(x[1:])
+    if x.startswith('--'):
+      flags[x[2:]] = True
+    elif x.startswith('-'):
+      if x[1:] not in flag_map:
+        die("unrecognized flag '%s'" % x)
+      flags[flag_map[x[1:]]] = True
     # everything else is an argument
     else:
       args.append(x)
   
   # we must have a command to dispatch
   if len(args) == 0:
-    die(__doc__)
+    print __doc__
+    die('no command provided')
+    
   
   cmd = args[0]
   args = args[1:]
@@ -106,62 +120,52 @@ def dispatch(*sysargs):
   
   mx = c.func_code.co_argcount         # maximum argument count
   mm = mx - len(c.func_defaults or []) # minimum argument count
+  if c.func_code.co_flags & 0x04: mm += 1  # bump by one for varargs
   
   # "co_flags & 0x04" checks whether the varargs flag is set
   if l < mm or (l > mx and not (c.func_code.co_flags & 0x04)):
     help(cmd)
-    die('')
+    die('incorrect number of arguments')
   
   # dispatch the command
   try:
     c(*args)
   # DEBUG (python exception handling sucks...)
-  except:
-    raise
+  #except:
+  #  raise
   # !DEBUG
-  #except Exception, e:
-  #  die(str(e))
+  except Exception, e:
+    die(str(e))
 
 
 def die(msg):
   """ Displays an error message and then exits. """
   import sys
-  print msg
+  print 'jink: fatal error -', msg
   sys.exit(1)
 
 
 def CreateEngine():
   """ Creates the Jink engine which controls rendering. """
-  global engine
-  from jink.engine import Engine
-  
-  # use the test (dummy) data sink
-  if 't' in flags:
-    from jink.engine import TestSink
-    sink = TestSink('v' in flags)
-  else:
-    from jink.fs import SinkFS
-    sink = SinkFS()
-  
-  # for now, filesystem is the only supported data source
-  # eventually we'll support git, and maybe others
-  from jink.fs import SourceFS
-  source = SourceFS(*FindRepo())
-  
-  engine = Engine(source, sink)
+  global flags, engine, relpath
 
-
-def FindRepo():
-  """ Search up the filesystem hierarchy to locate the repository root. """
-  root = os.path.abspath(os.getcwd())
-  fixup = root
+  # Search up the filesystem hierarchy to locate the repository root.
+  cwd = os.path.abspath(os.getcwd())
+  root = cwd
   while not os.path.exists(os.path.join(root,'.jink')):
     next = os.path.dirname(root)
     if next == root: # reached fs root
       raise Exception('fatal: not a jink repository')
     root = next
-  # return the root directory, plus the relative path to the cwd
-  return (root, fixup != root and fixup[len(root)+1:] or '')
+  relpath = cwd != root and cwd[len(root)+1:] or ''
+  
+  from jink.engine import Engine
+  from jink.fs import SourceFS, SinkFS
+  
+  # for now, filesystem is the only supported data source/sink
+  # eventually we'll support git, and maybe others
+  engine = Engine(SourceFS(root), SinkFS(), flags)
+
 
 
 #TODO: more environment variables for templates (path-to-root, etc.)

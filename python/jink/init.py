@@ -43,12 +43,12 @@ def init(path):
 
 ## DATA ##
 DEFAULT_CONFIG="""TARGET_changeme = 'path/to/target'
-DEFAULT_TEMPLATE = [
-  all('master.tmpl')
+TEMPLATES = [
+  template(r'.*\.html','master.tmpl')
   ]
 FILTERS = [
-  mime('^text/',render),
-  all(copy)
+  render(r'.*\.html'),
+  copy(r'.*')
   ]
 """
 

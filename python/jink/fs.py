@@ -1,62 +1,68 @@
 from __future__ import with_statement
-import os, os.path
+import os, os.path, stat
+from jink.prototype import ISource, ISink
 
-
-class SourceFS(object):
-  def __init__(self, root, relpath):
+class SourceFS(ISource):
+  def __init__(self, root):
     self.root = root
-    self.relpath = relpath
   
-  def cdata(self):
-    with open(os.path.join(self.root,'site-config')) as f:
-      return f.read()
+  def locate(self, target):
+    return os.path.abspath(os.path.join(self.root,target))
   
-  def loadTemplate(self, tmpl):
-    with open(os.path.join(self.root,'templates',tmpl)) as f:
-      return f.read(), tmpl, lambda: True
-  
-  def iter_all(self):
-    root = os.path.join(self.root,'content')
-    trim = len(root)+1
-    for (r,d,f) in os.walk(root):
-      for x in f:
-        yield os.path.join(r,x)[trim:]
+  def stat(self, target):
+    path = self.locate(target)
+    return os.path.exists(path) and os.stat(path)[stat.ST_MTIME] or 0
   
   def read(self, target):
-    with open(os.path.join(self.root,'content',target)) as f:
+    with open(self.locate(target)) as f:
       return f.read()
   
-  def configure(self, config):
-    config['TARGET'] = os.path.abspath(os.path.join(self.root,config['TARGET']))
+  def iter_all(self):
+    trim = len(self.root)+1
+    for (r,d,f) in os.walk(self.locate('content')):
+      for x in f:
+        yield os.path.join(r,x)[trim:]
 
-  def locate(self, target):
-    path = os.path.join(self.relpath,target)
-    if not path.startswith('content/'):
-      raise Exception("fatal: can't build target '%s' outside of content directory" % path)
-    return path[len('content/'):]
 
-  
-class SinkFS(object):
+class SinkFS(ISink):
   def __init__(self):
     pass
   
-  def configure(self, config):
-    self.root = config['TARGET']
-
+  def configure(self, source, config):
+    self.root = source.locate(config['TARGET'])
+    self.trial = config.get('trial-run', False)
+    self.verbose = config.get('verbose', False)
+  
+  def locate(self, target):
+    if len(target) < 8 or target[:8] != 'content/':
+      raise Exception('cannot locate target "%s" in data sink' % target)
+    return os.path.join(self.root,target[8:])
+  
   def clean(self):
     if os.path.exists(self.root):
       print '  cleaning target [%s]' % self.root
+      if self.trial: return
+      
       import shutil
       for x in os.listdir(self.root):
         x = os.path.join(self.root,x)
         if os.path.isdir(x): shutil.rmtree(x)
         else:                os.remove(x)
   
+  def stat(self, target):
+    path = self.locate(target)
+    return os.path.exists(path) and os.stat(path)[stat.ST_MTIME] or 0
+  
   def write(self, target, data):
-    path = os.path.join(self.root,target)
+    path = self.locate(target)
+    
     dir = os.path.dirname(path)
-    if not os.path.exists(dir): os.makedirs(dir)
-    with open(path,'w') as f:
-      print '   write:',path
-      f.write(data)
-
+    if not os.path.exists(dir):
+      print '   creating directory:', dir
+      if not self.trial:
+        os.makedirs(dir)
+    
+    print '   write:', path
+    if not self.trial:
+      with open(path,'w') as f:
+        f.write(data)
