@@ -1,7 +1,7 @@
 from __future__ import with_statement
 import re, os, os.path
-from jinja2 import Environment, BaseLoader, TemplateNotFound
 
+from jinja2 import Environment, BaseLoader, TemplateNotFound, meta
 
 class Engine(object):
   def __init__(self, source, sink, config):
@@ -76,7 +76,10 @@ class Engine(object):
     """ render template to text """
     
     # check if inheritance is specified
-    if not self.re_tmpl.search(data[:data.find('\n')]):
+    refs = meta.find_referenced_templates(self.engine.parse(data))
+    try:
+      refs.next()
+    except StopIteration, e:
       # no, so insert default template
       t = self._filter(f_target, self.templates)
       if t: data = ( '{%% extends "%s" %%}\n' % t ) + data
