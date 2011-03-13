@@ -1,6 +1,7 @@
 from __future__ import with_statement
 import re, os, os.path
 
+from jink import plugin
 from jinja2 import Environment, BaseLoader, TemplateNotFound, meta
 
 class Engine(object):
@@ -72,6 +73,7 @@ class Engine(object):
     return default
   
   
+  @plugin.api_prehook('onBeforeRender', permit_argmod=True, permit_cancel=True)
   def _render(self, f_target, data):
     """ render template to text """
     
