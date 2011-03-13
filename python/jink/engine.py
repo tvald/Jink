@@ -28,7 +28,7 @@ class Engine(object):
     
     loader = BaseLoader()
     loader.get_source = doload
-    self.engine = Environment(loader = loader)
+    self.engine = Environment(loader = loader, trim_blocks=True)
     
     self.templates = self.config.get('TEMPLATES',[])
     self.re_tmpl = re.compile(r'{%-?\s+extends\s+"(.+)"\s+-?%}')
