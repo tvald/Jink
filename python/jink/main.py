@@ -1,8 +1,6 @@
 """
 jink   Jinja2-based templating build system
 Usage: jink COMMAND [arguments]
-
-See 'jink help' for a list of commands."
 """
 from __future__ import with_statement, absolute_import
 import os, os.path
@@ -108,7 +106,9 @@ def dispatch(*sysargs):
   # we must have a command to dispatch
   if len(args) == 0:
     print __doc__
-    die('no command provided')
+    print
+    print "See 'jink help' for a list of commands."
+    die()
     
   
   cmd = args[0]
@@ -138,11 +138,12 @@ def dispatch(*sysargs):
     die(str(e))
 
 
-def die(msg):
+class JinkExitException(BaseException):
+  pass
+
+def die(msg = None, status = 1):
   """ Displays an error message and then exits. """
-  import sys
-  print 'jink: fatal error -', msg
-  sys.exit(1)
+  raise JinkExitException(msg and ('jink: fatal error - ' + msg), status)
 
 
 def CreateEngine():
@@ -166,6 +167,15 @@ def CreateEngine():
   # eventually we'll support git, and maybe others
   engine = Engine(SourceFS(root), SinkFS(), flags)
 
+
+
+if __name__ == '__main__':
+  import sys
+  try:
+    dispatch(*sys.argv[1:])
+  except JinkExitException, e:
+    if e.args[0]: print e.args[0]
+    sys.exit(e.args[1])
 
 
 #TODO: more environment variables for templates (path-to-root, etc.)
