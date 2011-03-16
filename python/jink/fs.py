@@ -28,10 +28,10 @@ class SinkFS(ISink):
   def __init__(self):
     pass
   
-  def configure(self, source, config):
+  def configure(self, source, config, log_callback):
     self.root = source.locate(config['TARGET'])
     self.trial = config.get('trial-run', False)
-    self.verbose = config.get('verbose', False)
+    self.log = log_callback
   
   def locate(self, target):
     if len(target) < 8 or target[:8] != 'content/':
@@ -40,7 +40,7 @@ class SinkFS(ISink):
   
   def clean(self):
     if os.path.exists(self.root):
-      print '  cleaning target [%s]' % self.root
+      self.log(1, '  cleaning target [%s]' % self.root)
       if self.trial: return
       
       import shutil
@@ -58,11 +58,11 @@ class SinkFS(ISink):
     
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
-      print '   creating directory:', dir
+      self.log(1, '   creating directory: ' + dir)
       if not self.trial:
         os.makedirs(dir)
     
-    print '   write:', path
+    self.log(1, '   write: ' + path)
     if not self.trial:
       with open(path,'w') as f:
         f.write(data)

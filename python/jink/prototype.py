@@ -15,7 +15,7 @@ class ISource(object):
   
 
 class ISink(object):
-  def configure(self, source, config):
+  def configure(self, source, config, log_callback):
     raise NotImplementedError('ISink.configure(source, config)')
   
   def locate(self, target):

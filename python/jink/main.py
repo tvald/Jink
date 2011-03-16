@@ -82,7 +82,7 @@ def help(cmd=None):
 #############
 flags = {}
 args  = []
-flag_map = { 't':'trial-run', 'v':'verbose' }
+flag_map = { 't':'trial-run', 'v':'verbose', 'q':'quiet' }
 relpath = ''
 engine = None
 
@@ -106,7 +106,6 @@ def dispatch(*sysargs):
   # we must have a command to dispatch
   if len(args) == 0:
     print __doc__
-    print
     print "See 'jink help' for a list of commands."
     die()
     

@@ -19,7 +19,7 @@ class Engine(object):
       })
     
     exec self.source.read('site-config') in self.config
-    self.sink.configure(self.source, self.config)
+    self.sink.configure(self.source, self.config, self.log)
     
     def doload(env, tmpl):
       try:
@@ -36,6 +36,17 @@ class Engine(object):
     self.re_macr = re.compile(r'{%-?\s+from\s+"(.+)"\simport\s.+\s+-?%}')
     self.tmpl_cache = {}
     self.filters = self.config.get('FILTERS',[])
+    
+    self.log_level = 1
+    if self.config.get('verbose',False):
+      self.log_level += 1
+    if self.config.get('quiet',False):
+      self.log_level -= 1
+  
+  
+  def log(self, level, msg):
+    if level <= self.log_level:
+      print msg
   
   
   def build(self, target):
@@ -52,18 +63,18 @@ class Engine(object):
     action = self._filter(f_target, self.filters, 'ignore')
     
     if action == 'copy':
-      print '  Copying "%s"...' % target
+      self.log(1, '  Copying "%s"...' % target)
       self.sink.write(target, self.source.read(target))
     elif action == 'ignore':
-      print '  Ignoring "%s"...' % target
+      self.log(1, '  Ignoring "%s"...' % target)
     elif action == 'render':
-      print '  Rendering "%s"...' % target
+      self.log(1, '  Rendering "%s"...' % target)
       self.sink.write(target, self._render(f_target,
                                            self.source.read(target)))
     elif action == None:
-      print 'WARNING: No action specified for "%s"...' % target
+      self.log(1, 'WARNING: No action specified for "%s"...' % target)
     else:
-      print 'WARNING: Unknown action [%s] on "%s"...' % (action, target)
+      self.log(1, 'WARNING: Unknown action [%s] on "%s"...' % (action, target))
   
   
   def _filter(self, data, filters, default = None):
@@ -88,10 +99,9 @@ class Engine(object):
     
     # render
     data = self.engine.from_string(data).render(dict(path = f_target))
-    if self.config.get('verbose',False):
-      print '------------------------------'
-      print data
-      print '------------------------------'
+    self.log(2, '------------------------------')
+    self.log(2, data)
+    self.log(2, '------------------------------')
     return data
 
   def get_templates(self, target):
