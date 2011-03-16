@@ -89,6 +89,8 @@ engine = None
 def dispatch(*sysargs):
   """ Dispatches a jink command. """
   global flags, args, flag_map
+  flags = {}
+  args  = []
   
   # dirt-simple argument processing
   for x in sysargs:
