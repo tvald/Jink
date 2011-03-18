@@ -11,9 +11,9 @@ JINK_PATH = '/path/to/jink/library'
 CONTENT_PATH = '/path/to/repo.jink'
 
 import os, os.path, sys
-CONTENT_PATH = os.path.abspath(os.path.join(CONTENT_PATH,'content'))
+REPO_PATH = os.path.abspath(REPO_PATH)
 sys.path.append(JINK_PATH)
-os.chdir(CONTENT_PATH)
+os.chdir(REPO_PATH)
 
 
 def compose_url(action, target):
@@ -26,7 +26,7 @@ def edit():
   global ERROR_MSG, data
   if not data:
     try:
-      with open(TARGET) as f:
+      with open('content/'+TARGET) as f:
         data = cgi.escape(f.read())
     except Exception, e:
       ERROR_MSG = 'Error: unable to open target.'
@@ -53,22 +53,22 @@ def submit():
   
   data = form.getfirst('text').replace( '\r', '' )
 
-  import jink.plugin, jink.main
+  import jink
   def callback(evt):
     evt.args[1] = data
   
-  jink.plugin.register('onBeforeRender', callback)
   try:
-    jink.main.dispatch('build', TARGET, '-t', '-q')
-  except jink.main.JinkExitException, e:
-    ERROR_MSG = 'Error: jink test build failed<br>[%d] %s' % \
-        (e.args[1], e.args[0])
+    J = jink.Jink( REPO_PATH, '', { 'trial-run' : True, 'quiet' : True } )
+    J.plugin.register('onBeforeRender', callback)
+    J.build('content/'+TARGET)
+  except Exception, e:
+    ERROR_MSG = 'Error: jink test build failed<br>%s' % str(e)
     error()
     edit()
     return
   
   try:
-    with open(TARGET, 'w') as f:
+    with open('content/'+TARGET, 'w') as f:
       f.write(data)
   except Exception, e:
     ERROR_MSG = 'Error: unable to open target.'
@@ -77,10 +77,10 @@ def submit():
     return
   
   try:
-    jink.main.dispatch('build', TARGET, '-q')
-  except jink.main.JinkExitException, e:
-    ERROR_MSG = 'Error: jink build failed<br>[%d] %s' % \
-        (e.args[1], e.args[0])
+    J = jink.Jink( REPO_PATH, '', { 'quiet' : True } )
+    J.build('content/'+TARGET)
+  except Exception, e:
+    ERROR_MSG = 'Error: jink build failed<br>%s' % str(e)
     error()
     edit()
     return
@@ -111,12 +111,14 @@ ACTION='edit'
 
 form = cgi.FieldStorage()
 if 'target' in form:
-  TARGET = form.getfirst('target')
-  if not os.path.abspath(TARGET).startswith(CONTENT_PATH):
+  TARGET = os.path.abspath(form.getfirst('target'))
+  if not TARGET.startswith(os.path.join(REPO_PATH,'')):
     ACTION = 'error'
     ERROR_MSG = 'Error: invalid path.'
-  elif 'action' in form:
-    ACTION = form.getfirst('action').lower()
+  else:
+    TARGET = TARGET[len(REPO_PATH)+1:]
+    if 'action' in form:
+      ACTION = form.getfirst('action').lower()
 else:
   ACTION = 'error'
   ERROR_MSG = 'Error: no target provided.'
