@@ -161,12 +161,12 @@ def CreateEngine():
     root = next
   relpath = cwd != root and cwd[len(root)+1:] or ''
   
-  from jink.engine import Engine
+  from jink import Jink
   from jink.fs import SourceFS, SinkFS
   
   # for now, filesystem is the only supported data source/sink
   # eventually we'll support git, and maybe others
-  engine = Engine(SourceFS(root), SinkFS(), flags)
+  engine = Jink(SourceFS(root), SinkFS(), flags)
 
 
 
@@ -178,9 +178,3 @@ if __name__ == '__main__':
     if e.args[0]: print e.args[0]
     sys.exit(e.args[1])
 
-
-#TODO: more environment variables for templates (path-to-root, etc.)
-#TODO: hooks (auto-stage with a post-build hook)
-#TODO: switch to FunctionLoader
-#TODO: add README to content (auto?)
-#TODO: don't rebuild completely (trace dependencies)
