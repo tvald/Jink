@@ -8,6 +8,7 @@ class Engine(object):
   def __init__(self, source, sink, config):
     self.source = source
     self.sink   = sink
+    self.plugin = plugin.PluginManager(self)
     self.config = {}
     
     self.config.update(config)

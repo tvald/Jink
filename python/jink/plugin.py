@@ -1,6 +1,4 @@
 
-_hooks = dict()
-
 class Event(object):
   def __init__(self, handle, context, result, args, kw):
     self.handle = handle
@@ -17,24 +15,24 @@ class Event(object):
     return self._cancel
 
 
-def bind(context):
-  """
-  Mostly useful for @bind(None) for detached functions.
-  """
-  def bind_decorator(f):
-    def bind_handler(*args, **kw):
-      f(None, *args, **kw)
-    return bind_handler
-  return bind_decorator
-
-
-def unbind(f):
-  """
-  Mostly useful for reversing @bind(None) before the actual call.
-  """
-  def unbind_handler(context, *args, **kw):
-    f(*args, **kw)
-  return unbind_handler
+class PluginManager(object):
+  def __init__(self, context=None):
+    self._hooks = dict()
+    if context:
+      self.bind(context)
+  
+  def bind(self, context):
+    context.__plugins__ = self
+    
+  def register(self, handle, callback):
+    """
+    Register a callback for the specified event handle.  The callback
+    will be passed (plugin.Event) as its arguments
+    """
+    self._hooks.setdefault(handle, []).append(callback)
+  
+  def getCallbacks(self, handle):
+    return self._hooks.setdefault(handle, [])
 
 
 def api_prehook(handle, permit_cancel=False, permit_argmod=False):
@@ -47,7 +45,7 @@ def api_prehook(handle, permit_cancel=False, permit_argmod=False):
     # define the method call interceptor
     def intercept(context, *args, **kw):
       # dispatch to all listeners, in order registered
-      for callback in _hooks.setdefault(handle, []):
+      for callback in context.__plugins__.getCallbacks(handle):
         evt = Event(handle, context, None, list(args), dict(kw))
         callback(evt)
         
@@ -69,9 +67,4 @@ def api_prehook(handle, permit_cancel=False, permit_argmod=False):
   return api_decorator
 
 
-def register(handle, callback):
-  """
-  Register a callback for the specified event handle.  The callback
-  will be passed (plugin.Event) as its arguments
-  """
-  _hooks.setdefault(handle, []).append(callback)
+__all__ = ['api_prehook', 'PluginManager']
