@@ -31,6 +31,14 @@ class PluginManager(object):
     """
     self._hooks.setdefault(handle, []).append(callback)
   
+  def unregister(self, handle, callback):
+    """
+    Unegister a callback for the specified event handle.  All instances
+    of the callback will be removed.
+    """
+    self._hooks[handle] = filter(lambda x: x is not callback,
+                                 self._hooks.setdefault(handle, []))
+  
   def getCallbacks(self, handle):
     return self._hooks.setdefault(handle, [])
 
