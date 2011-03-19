@@ -119,7 +119,7 @@ class RuntimeContext(object):
     self.args = self.args[1:]
   
     # validate command and arguments
-    c = cmdset.get(self.cmd,False) or die('Unknown command: %s' % cmd)
+    c = cmdset.get(self.cmd,False) or die('Unknown command: %s' % self.cmd)
     l = len(self.args)
     
     mx = c.func_code.co_argcount - 1     # maximum argument count
