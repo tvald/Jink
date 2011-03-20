@@ -2,12 +2,16 @@ from __future__ import with_statement
 import os, os.path, stat
 import jink.prototype
 
+FS_TAG = '_FS_'
+
 class SourceFS(jink.prototype.ISource):
   def __init__(self, root):
     self.root = root
   
   def locate(self, handle):
-    return os.path.abspath(os.path.join(self.root,handle.tag,handle.ref))
+    tag = handle.tag
+    if tag == FS_TAG: tag = '.'  # deal with explicit FS case
+    return os.path.abspath(os.path.join(self.root, tag, handle.ref))
   
   def stat(self, handle):
     path = self.locate(handle)
@@ -29,7 +33,8 @@ class SinkFS(jink.prototype.ISink):
     pass
   
   def configure(self, source, config, context):
-    self.root = source.locate(context.createHandle(config['TARGET'], tag='.'))
+    self.root = source.locate(context.createHandle(config['TARGET'],
+                                                   tag=FS_TAG))
     self.trial = config.get('trial-run', False)
     self.log = context.log
   
