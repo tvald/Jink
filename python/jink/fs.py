@@ -6,37 +6,37 @@ class SourceFS(jink.prototype.ISource):
   def __init__(self, root):
     self.root = root
   
-  def locate(self, target):
-    return os.path.abspath(os.path.join(self.root,target))
+  def locate(self, handle):
+    return os.path.abspath(os.path.join(self.root,handle.tag,handle.ref))
   
-  def stat(self, target):
-    path = self.locate(target)
+  def stat(self, handle):
+    path = self.locate(handle)
     return os.path.exists(path) and os.stat(path)[stat.ST_MTIME] or 0
   
-  def read(self, target):
-    with open(self.locate(target)) as f:
+  def read(self, handle):
+    with open(self.locate(handle)) as f:
       return f.read()
   
-  def iter_all(self):
+  def iter_all(self, context):
     trim = len(self.root)+1
-    for (r,d,f) in os.walk(self.locate('content')):
+    for (r,d,f) in os.walk(self.locate(context.createHandle('content'))):
       for x in f:
-        yield os.path.join(r,x)[trim:]
+        yield context.createHandle(os.path.join(r,x)[trim:])
 
 
 class SinkFS(jink.prototype.ISink):
   def __init__(self):
     pass
   
-  def configure(self, source, config, log_callback):
-    self.root = source.locate(config['TARGET'])
+  def configure(self, source, config, context):
+    self.root = source.locate(context.createHandle(config['TARGET'], tag='.'))
     self.trial = config.get('trial-run', False)
-    self.log = log_callback
+    self.log = context.log
   
-  def locate(self, target):
-    if len(target) < 8 or target[:8] != 'content/':
-      raise Exception('cannot locate target "%s" in data sink' % target)
-    return os.path.join(self.root,target[8:])
+  def locate(self, handle):
+    if handle.tag != 'content':
+      raise Exception('cannot locate target "%s" in data sink' % handle)
+    return os.path.join(self.root,handle.ref)
   
   def clean(self):
     if os.path.exists(self.root):
@@ -49,12 +49,12 @@ class SinkFS(jink.prototype.ISink):
         if os.path.isdir(x): shutil.rmtree(x)
         else:                os.remove(x)
   
-  def stat(self, target):
-    path = self.locate(target)
+  def stat(self, handle):
+    path = self.locate(handle)
     return os.path.exists(path) and os.stat(path)[stat.ST_MTIME] or 0
   
-  def write(self, target, data):
-    path = self.locate(target)
+  def write(self, handle, data):
+    path = self.locate(handle)
     
     dir = os.path.dirname(path)
     if not os.path.exists(dir):

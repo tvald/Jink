@@ -27,7 +27,7 @@ def rebuild(context):
   """Clean and rebuild all targets"""
   engine = context.createEngine()
   engine.sink.clean()
-  for x in engine.source.iter_all():
+  for x in engine.source.iter_all(engine):
     engine.build(x)
 
 
@@ -36,14 +36,15 @@ def build(context, *targets):
   """Build a set of targets"""
   engine = context.createEngine()
   for x in targets:
-    engine.build(os.path.join(context.relpath,x))
+    engine.build(engine.createHandle(
+            os.path.join(context.relpath,x)))
 
 
 @command
 def update(context):
   """Rebuild based on changes since the last build"""
   engine = context.createEngine()
-  for x in engine.source.iter_all():
+  for x in engine.source.iter_all(engine):
     if max(map(lambda y: engine.source.stat(y),
                engine.get_templates(x)+[x])) \
            > engine.sink.stat(x):
@@ -139,11 +140,11 @@ class RuntimeContext(object):
     try:
       self.cmd_call(self, *self.args)
     # DEBUG (python exception handling sucks...)
-    #except:
-    #  raise
+    except:
+      raise
     # !DEBUG
-    except Exception, e:
-      die(str(e))
+    #except Exception, e:
+    #  die(str(e))
 
   def createEngine(self):
     """ Creates the Jink engine which controls rendering. """

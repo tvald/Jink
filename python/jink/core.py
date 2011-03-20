@@ -3,6 +3,63 @@ import re, os, os.path
 
 import jink.plugin
 import jinja2, jinja2.meta
+import collections
+
+### Models ###
+class Handle(object):
+  """
+  Encapsulates a reference to an object in the jink repo.  Client
+  code will never have a reason to interact directly with an
+  instance  of this class.
+  """
+  def __init__(self, tag, ref):
+    self.tag = tag
+    self.ref = ref
+    self.uid = self.tag+'/'+self.ref
+  
+  def __repr__(self):
+    return self.uid
+
+  @classmethod
+  def normalize(cls, target):
+    """ 
+    Normalizes the target reference.
+    Note: A//B, A/B/, A/./B and A/foo/../B all become A/B
+    """
+    parts = collections.deque()
+    for p in target.split('/'):
+      if (p is '' or p is '.') and len(parts) > 0:
+        pass
+      elif p is '..' and len(parts) > 0:
+        parts.pop()
+      else:
+        parts.append(p)
+    return '/'.join(parts)
+    
+  @classmethod
+  def create(cls, target, tag=None):
+    """ Create a handle which can be used within the jink engine"""
+    norm = cls.normalize(target)
+    
+    if tag == None:
+      norm = norm.split('/',1)
+      if len(norm) == 1:
+        norm.append('')
+    else:
+      norm = (tag,norm)
+    
+    return cls(*norm)
+
+  @classmethod
+  def getOrCreate(cls, maybeHandle):
+    if type(maybeHandle) is str:
+      return Handle.create(maybeHandle)
+    elif isinstance(maybeHandle, Handle):
+      return maybeHandle
+    else:
+      raise Exception('Cannot convert %s to jink.Handle' %
+                      str(type(maybeHandle)))
+
 
 class Engine(object):
   def __init__(self, source, sink, config):
@@ -19,12 +76,13 @@ class Engine(object):
       'template': lambda x, y: (re.compile(x), y),
       })
     
-    exec self.source.read('site-config') in self.config
-    self.sink.configure(self.source, self.config, self.log)
+    exec self.source.read(self.createHandle('site-config')) in self.config
+    self.sink.configure(self.source, self.config, self)
     
     def doload(tmpl):
       try:
-        return self.source.read('templates/'+tmpl), tmpl, lambda: True
+        tmpl_data = self.source.read(self.createHandle('templates/'+tmpl))
+        return (tmpl_data, tmpl, lambda: True)
       except Exception, e:
         raise jinja2.TemplateNotFound(tmpl)
     
@@ -46,33 +104,34 @@ class Engine(object):
     if level <= self.log_level:
       print msg
   
+  def createHandle(self, target, tag = None):
+    return Handle.create(target, tag = tag)
   
-  def build(self, target):
+  def build(self, handle):
     """
     Build a particular object, as identified by its relative
     location within the repository.
     """
     
-    if len(target) < 8 or target[:8] != 'content/':
-      raise Exception('cannot build non-content target "%s"' % target)
-    f_target = target[8:]
+    if handle.tag != 'content':
+      raise Exception('cannot build non-content target "%s"' % handle)
     
     # filter cascade
-    action = self._filter(f_target, self.filters, 'ignore')
+    action = self._filter(handle.ref, self.filters, 'ignore')
     
     if action == 'copy':
-      self.log(1, '  Copying "%s"...' % target)
-      self.sink.write(target, self.source.read(target))
+      self.log(1, '  Copying "%s"...' % handle)
+      self.sink.write(handle, self.source.read(handle))
     elif action == 'ignore':
-      self.log(1, '  Ignoring "%s"...' % target)
+      self.log(1, '  Ignoring "%s"...' % handle)
     elif action == 'render':
-      self.log(1, '  Rendering "%s"...' % target)
-      self.sink.write(target, self._render(f_target,
-                                           self.source.read(target)))
+      self.log(1, '  Rendering "%s"...' % handle)
+      self.sink.write(handle, self._render(handle.ref,
+                                           self.source.read(handle)))
     elif action == None:
-      self.log(1, 'WARNING: No action specified for "%s"...' % target)
+      self.log(1, 'WARNING: No action specified for "%s"...' % handle)
     else:
-      self.log(1, 'WARNING: Unknown action [%s] on "%s"...' % (action, target))
+      self.log(1, 'WARNING: Unknown action [%s] on "%s"...' % (action, handle))
   
   
   def _filter(self, data, filters, default = None):
@@ -103,28 +162,27 @@ class Engine(object):
     self.log(2, '------------------------------')
     return data
 
-  def get_templates(self, target):
+  def get_templates(self, handle):
     """ list all templates from which the target inherits """
     
     # sanity check...
-    if len(target) < 8 or target[:8] != 'content/':
-      raise Exception('cannot build non-content target "%s"' % target)
-    f_target = target[8:]
-    action = self._filter(f_target, self.filters, 'ignore')
+    if handle.tag != 'content':
+      raise Exception('cannot build non-content target "%s"' % handle)
+    
+    action = self._filter(handle.ref, self.filters, 'ignore')
     if action != 'render': return []
     
     t = []
     first = True
-    from collections import deque
-    Q = deque()
+    Q = collections.deque()
     
     while True:
-      if target in self.tmpl_cache:
-        Q.extend(self.tmpl_cache[target])
+      if handle.uid in self.tmpl_cache:
+        Q.extend(self.tmpl_cache[handle.uid])
         first = False
       else:
         a = []
-        data = self.source.read(target)
+        data = self.source.read(handle)
         
         refs = jinja2.meta.find_referenced_templates(self.engine.parse(data))
         refs = [x for x in refs]
@@ -133,8 +191,7 @@ class Engine(object):
           Q.extend(refs)
           a.extend(refs)
         elif first:
-          f_target = target[8:]  # trim leading 'content/'
-          tmpl = self._filter(f_target, self.templates)
+          tmpl = self._filter(handle.ref, self.templates)
           if tmpl:
             Q.append(tmpl)
             a.append(tmpl)
@@ -142,9 +199,9 @@ class Engine(object):
         if first:
           first = False
         else:
-          self.tmpl_cache[target] = a
+          self.tmpl_cache[handle.uid] = a
       
       if len(Q) == 0: return t
-      target = 'templates/'+Q.popleft()
-      t.append(target)
+      handle = Handle.create('templates/'+Q.popleft())
+      t.append(handle)
 

@@ -1,32 +1,32 @@
 
 
 class ISource(object):
-  def iter_all(self):
-    raise NotImplementedError('ISource.iter_all()')
+  def iter_all(self, context):
+    raise NotImplementedError('ISource.iter_all(context)')
   
-  def locate(self, target):
-    raise NotImplementedError('ISource.locate(target)')
+  def locate(self, handle):
+    raise NotImplementedError('ISource.locate(handle)')
 
-  def stat(self, target):
-    raise NotImplementedError('ISource.stat(target)')
+  def stat(self, handle):
+    raise NotImplementedError('ISource.stat(handle)')
   
-  def read(self, target):
-    raise NotImplementedError('ISource.read(target)')
+  def read(self, handle):
+    raise NotImplementedError('ISource.read(handle)')
   
 
 class ISink(object):
   def configure(self, source, config, log_callback):
     raise NotImplementedError('ISink.configure(source, config)')
   
-  def locate(self, target):
-    raise NotImplementedError('ISink.locate(target)')
+  def locate(self, handle):
+    raise NotImplementedError('ISink.locate(handle)')
   
   def clean(self):
-    raise NotImplementedError('ISink.clean(target)')
+    raise NotImplementedError('ISink.clean(handle)')
 
-  def stat(self, target):
-    raise NotImplementedError('ISink.stat(target)')
+  def stat(self, handle):
+    raise NotImplementedError('ISink.stat(handle)')
   
-  def write(self, target, data):
-    raise NotImplementedError('ISink.write(target, data)')
+  def write(self, handle, data):
+    raise NotImplementedError('ISink.write(handle, data)')
 
