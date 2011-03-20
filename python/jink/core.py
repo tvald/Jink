@@ -32,8 +32,6 @@ class Engine(object):
                               trim_blocks=True)
     
     self.templates = self.config.get('TEMPLATES',[])
-    self.re_tmpl = re.compile(r'{%-?\s+extends\s+"(.+)"\s+-?%}')
-    self.re_macr = re.compile(r'{%-?\s+from\s+"(.+)"\simport\s.+\s+-?%}')
     self.tmpl_cache = {}
     self.filters = self.config.get('FILTERS',[])
     
@@ -128,20 +126,18 @@ class Engine(object):
         a = []
         data = self.source.read(target)
         
-        x = self.re_tmpl.search(data[:data.find('\n')])
-        if x:
-          Q.append(x.group(1))
-          a.append(x.group(1))
+        refs = jinja2.meta.find_referenced_templates(self.engine.parse(data))
+        refs = [x for x in refs]
+        
+        if len(refs) > 0:
+          Q.extend(refs)
+          a.extend(refs)
         elif first:
           f_target = target[8:]  # trim leading 'content/'
           tmpl = self._filter(f_target, self.templates)
           if tmpl:
             Q.append(tmpl)
             a.append(tmpl)
-        
-        x = self.re_macr.findall(data)
-        Q.extend(x)
-        a.extend(x)
         
         if first:
           first = False
