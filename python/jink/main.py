@@ -18,8 +18,8 @@ def command(f):
 @command
 def init(context):
   """Create a site repository"""
-  from jink.init import init
-  init('.')
+  import jink.init
+  jink.init.init('.')
 
 
 @command
@@ -157,12 +157,12 @@ class RuntimeContext(object):
       root = next
     self.relpath = cwd != root and cwd[len(root)+1:] or ''
     
-    from jink import Jink
+    import jink
     from jink.fs import SourceFS, SinkFS
     
     # for now, filesystem is the only supported data source/sink
     # eventually we'll support git, and maybe others
-    self.engine = Jink(SourceFS(root), SinkFS(), self.flags)
+    self.engine = jink.Jink(SourceFS(root), SinkFS(), self.flags)
     return self.engine
 
 

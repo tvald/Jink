@@ -1,14 +1,14 @@
 from __future__ import with_statement
 import re, os, os.path
 
-from jink import plugin
-from jinja2 import Environment, FunctionLoader, TemplateNotFound, meta
+import jink.plugin
+import jinja2, jinja2.meta
 
 class Engine(object):
   def __init__(self, source, sink, config):
     self.source = source
     self.sink   = sink
-    self.plugin = plugin.PluginManager(self)
+    self.plugin = jink.plugin.PluginManager(self)
     self.config = {}
     
     self.config.update(config)
@@ -26,9 +26,9 @@ class Engine(object):
       try:
         return self.source.read('templates/'+tmpl), tmpl, lambda: True
       except Exception, e:
-        raise TemplateNotFound(tmpl)
+        raise jinja2.TemplateNotFound(tmpl)
     
-    self.engine = Environment(loader = FunctionLoader(doload),
+    self.engine = jinja2.Environment(loader = jinja2.FunctionLoader(doload),
                               trim_blocks=True)
     
     self.templates = self.config.get('TEMPLATES',[])
@@ -84,12 +84,13 @@ class Engine(object):
     return default
   
   
-  @plugin.api_prehook('onBeforeRender', permit_argmod=True, permit_cancel=True)
+  @jink.plugin.api_prehook('onBeforeRender',
+                           permit_argmod=True, permit_cancel=True)
   def _render(self, f_target, data):
     """ render template to text """
     
     # check if inheritance is specified
-    refs = meta.find_referenced_templates(self.engine.parse(data))
+    refs = jinja2.meta.find_referenced_templates(self.engine.parse(data))
     try:
       refs.next()
     except StopIteration, e:

@@ -4,8 +4,7 @@ Create a template jink repo.
 from __future__ import with_statement
 
 def init(path):
-  import os, os.path, shutil
-  from subprocess import check_call
+  import os, os.path
   
   repopath = os.path.abspath(os.path.normpath(path))
   

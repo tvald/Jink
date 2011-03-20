@@ -1,8 +1,8 @@
 from __future__ import with_statement
 import os, os.path, stat
-from jink.prototype import ISource, ISink
+import jink.prototype
 
-class SourceFS(ISource):
+class SourceFS(jink.prototype.ISource):
   def __init__(self, root):
     self.root = root
   
@@ -24,7 +24,7 @@ class SourceFS(ISource):
         yield os.path.join(r,x)[trim:]
 
 
-class SinkFS(ISink):
+class SinkFS(jink.prototype.ISink):
   def __init__(self):
     pass
   
