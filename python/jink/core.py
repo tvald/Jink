@@ -2,7 +2,7 @@ from __future__ import with_statement
 import re, os, os.path
 
 from jink import plugin
-from jinja2 import Environment, BaseLoader, TemplateNotFound, meta
+from jinja2 import Environment, FunctionLoader, TemplateNotFound, meta
 
 class Engine(object):
   def __init__(self, source, sink, config):
@@ -22,15 +22,14 @@ class Engine(object):
     exec self.source.read('site-config') in self.config
     self.sink.configure(self.source, self.config, self.log)
     
-    def doload(env, tmpl):
+    def doload(tmpl):
       try:
         return self.source.read('templates/'+tmpl), tmpl, lambda: True
       except Exception, e:
         raise TemplateNotFound(tmpl)
     
-    loader = BaseLoader()
-    loader.get_source = doload
-    self.engine = Environment(loader = loader, trim_blocks=True)
+    self.engine = Environment(loader = FunctionLoader(doload),
+                              trim_blocks=True)
     
     self.templates = self.config.get('TEMPLATES',[])
     self.re_tmpl = re.compile(r'{%-?\s+extends\s+"(.+)"\s+-?%}')
