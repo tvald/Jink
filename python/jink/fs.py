@@ -4,6 +4,7 @@ import jink.prototype
 
 FS_TAG = '_FS_'
 
+  
 class SourceFS(jink.prototype.ISource):
   def __init__(self, root):
     self.root = root
@@ -26,6 +27,20 @@ class SourceFS(jink.prototype.ISource):
     for (r,d,f) in os.walk(self.locate(context.createHandle('content'))):
       for x in f:
         yield context.createHandle(os.path.join(r,x)[trim:])
+
+  def update(self, handle, data):
+    path = self.locate(handle)
+    
+    dir = os.path.dirname(path)
+    if not os.path.exists(dir):
+      self.log(1, '   creating directory: ' + dir)
+      if not self.trial:
+        os.makedirs(dir)
+    
+    self.log(1, '   write: ' + path)
+    if not self.trial:
+      with open(path,'w') as f:
+        f.write(data)
 
 
 class SinkFS(jink.prototype.ISink):

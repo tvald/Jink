@@ -12,6 +12,9 @@ class ISource(object):
   
   def read(self, handle):
     raise NotImplementedError('ISource.read(handle)')
+
+  def update(self, handle, data):
+    raise NotImplementedError('ISource.update(handle, data)')
   
 
 class ISink(object):
