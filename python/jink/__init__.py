@@ -2,7 +2,13 @@
 Jink Template Framework
 author: Tony Valderrama <tvald@galadore.net>
 """
-import jink.core, jink.fs, urlparse
+import jink.core, jink.extension, urlparse
+
+jink.extension.source.register(
+    ['file',''], jink.extension.LazyFactory('jink.fs','SourceFS'))
+jink.extension.sink.register(
+    ['file',''], jink.extension.LazyFactory('jink.fs','SinkFS'))
+
 
 def Jink(source, sink, config):
   # configure source for client
@@ -11,8 +17,9 @@ def Jink(source, sink, config):
     if uri.scheme == 'file' or uri.scheme == '':
       if uri.netloc is not '':
         raise Exception('file:// protocol must have empty network location')
-      source = jink.fs.SourceFS(source)
-    else:
+    try:
+      source = jink.extension.source.get(uri.scheme).instantiate(uri.path)
+    except KeyError, e:
       raise Exception("unrecognized source protocol '%s'" % uri.scheme)
   
   # configure sink for client
@@ -21,8 +28,9 @@ def Jink(source, sink, config):
     if uri.scheme == 'file' or uri.scheme == '':
       if uri.netloc is not '':
         raise Exception('file:// protocol must have empty network location')
-      sink = jink.fs.SinkFS()
-    else:
+    try:
+      sink = jink.extension.source.get(uri.scheme).instantiate()
+    except KeyError, e:
       raise Exception("unrecognized sink protocol '%s'" % uri.scheme)
   
   return jink.core.Engine(source, sink, config)
