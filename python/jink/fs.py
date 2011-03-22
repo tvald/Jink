@@ -1,13 +1,21 @@
 from __future__ import with_statement
-import os, os.path, stat
+import os, os.path, stat, types
 import jink.prototype
 
 FS_TAG = '_FS_'
 
   
 class SourceFS(jink.prototype.ISource):
-  def __init__(self, root):
-    self.root = root
+  def __init__(self, path_or_uri):
+    if isinstance(path_or_uri, types.StringTypes):
+      self.root = path_or_uri
+    else:
+      uri = path_or_uri
+      if uri.scheme == 'file' or uri.scheme == '':
+        if uri.netloc is not '':
+          raise Exception('file:// protocol must have empty network location')
+      self.root = uri.path
+      
   
   def locate(self, handle):
     tag = handle.tag

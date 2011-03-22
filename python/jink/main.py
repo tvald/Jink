@@ -161,9 +161,7 @@ class RuntimeContext(object):
     import jink
     from jink.fs import SourceFS, SinkFS
     
-    # for now, filesystem is the only supported data source/sink
-    # eventually we'll support git, and maybe others
-    self.engine = jink.Jink(SourceFS(root), SinkFS(), self.flags)
+    self.engine = jink.Jink(root, SinkFS(), self.flags)
     return self.engine
 
 

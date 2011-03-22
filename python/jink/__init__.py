@@ -14,20 +14,16 @@ def Jink(source, sink, config):
   # configure source for client
   if type(source) is str:
     uri = urlparse.urlparse(source)
-    if uri.scheme == 'file' or uri.scheme == '':
-      if uri.netloc is not '':
-        raise Exception('file:// protocol must have empty network location')
+    config['source.uri'] = uri
     try:
-      source = jink.extension.source.get(uri.scheme).instantiate(uri.path)
+      source = jink.extension.source.get(uri.scheme).instantiate(uri)
     except KeyError, e:
       raise Exception("unrecognized source protocol '%s'" % uri.scheme)
   
   # configure sink for client
   if type(sink) is str:
     uri = urlparse.urlparse(sink)
-    if uri.scheme == 'file' or uri.scheme == '':
-      if uri.netloc is not '':
-        raise Exception('file:// protocol must have empty network location')
+    config['sink.uri'] = uri
     try:
       sink = jink.extension.source.get(uri.scheme).instantiate()
     except KeyError, e:

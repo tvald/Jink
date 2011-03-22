@@ -9,8 +9,8 @@ class LazyFactory(object):
   def resolve(self):
     if self.factory == None:
       self.factory = reduce(lambda x, y: getattr(x, y),
-                            module_str.split('.')[1:] +
-                            callable_str.split('.'),
+                            self.module_str.split('.')[1:] +
+                            self.callable_str.split('.'),
                             __import__(self.module_str))
     return self.factory
   
