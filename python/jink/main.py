@@ -159,9 +159,7 @@ class RuntimeContext(object):
     self.relpath = cwd != root and cwd[len(root)+1:] or ''
     
     import jink
-    from jink.fs import SourceFS, SinkFS
-    
-    self.engine = jink.Jink(root, SinkFS(), self.flags)
+    self.engine = jink.Jink(root, self.flags)
     return self.engine
 
 

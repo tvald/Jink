@@ -58,7 +58,7 @@ def submit():
     evt.args[1] = data
   
   try:
-    J = jink.Jink( REPO_PATH, '', { 'trial-run' : True, 'quiet' : True } )
+    J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
     J.plugin.register('onBeforeRender', callback)
     J.build('content/'+TARGET)
   except Exception, e:
@@ -77,7 +77,7 @@ def submit():
     return
   
   try:
-    J = jink.Jink( REPO_PATH, '', { 'quiet' : True } )
+    J = jink.Jink( REPO_PATH, { 'quiet' : True } )
     J.build('content/'+TARGET)
   except Exception, e:
     ERROR_MSG = 'Error: jink build failed<br>%s' % str(e)

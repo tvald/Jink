@@ -52,13 +52,10 @@ class SourceFS(jink.prototype.ISource):
 
 
 class SinkFS(jink.prototype.ISink):
-  def __init__(self):
-    pass
-  
-  def configure(self, source, config, context):
-    self.root = source.locate(context.createHandle(config['TARGET'],
-                                                   tag=FS_TAG))
-    self.trial = config.get('trial-run', False)
+  def __init__(self, uri, context):
+    self.root = context.source.locate(
+      context.createHandle(uri.path, tag=FS_TAG))
+    self.trial = context.config.get('trial-run', False)
     self.log = context.log
   
   def locate(self, handle):

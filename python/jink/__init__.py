@@ -10,7 +10,7 @@ jink.extension.sink.register(
     ['file',''], jink.extension.LazyFactory('jink.fs','SinkFS'))
 
 
-def Jink(source, sink, config):
+def Jink(source, config):
   # configure source for client
   if type(source) is str:
     uri = urlparse.urlparse(source)
@@ -20,15 +20,6 @@ def Jink(source, sink, config):
     except KeyError, e:
       raise Exception("unrecognized source protocol '%s'" % uri.scheme)
   
-  # configure sink for client
-  if type(sink) is str:
-    uri = urlparse.urlparse(sink)
-    config['sink.uri'] = uri
-    try:
-      sink = jink.extension.source.get(uri.scheme).instantiate()
-    except KeyError, e:
-      raise Exception("unrecognized sink protocol '%s'" % uri.scheme)
-  
-  return jink.core.Engine(source, sink, config)
+  return jink.core.Engine(source, config)
 
 __all__ = ['Jink']

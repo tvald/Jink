@@ -1,6 +1,9 @@
 
 
 class ISource(object):
+  def __init__(self, uri):
+    raise NotImplementedError('ISource.__init__(uri)')
+  
   def iter_all(self, context):
     raise NotImplementedError('ISource.iter_all(context)')
   
@@ -18,8 +21,8 @@ class ISource(object):
   
 
 class ISink(object):
-  def configure(self, source, config, log_callback):
-    raise NotImplementedError('ISink.configure(source, config)')
+  def __init__(self, uri, context):
+    raise NotImplementedError('ISink.__init__(uri, context)')
   
   def locate(self, handle):
     raise NotImplementedError('ISink.locate(handle)')

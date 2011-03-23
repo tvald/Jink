@@ -1,9 +1,9 @@
 from __future__ import with_statement
 import re, os, os.path
 
-import jink.plugin
+import jink.plugin, jink.extension
 import jinja2, jinja2.meta
-import collections
+import collections, urlparse
 
 ### Models ###
 class Handle(object):
@@ -62,9 +62,8 @@ class Handle(object):
 
 
 class Engine(object):
-  def __init__(self, source, sink, config):
+  def __init__(self, source, config):
     self.source = source
-    self.sink   = sink
     self.plugin = jink.plugin.PluginManager(self)
     self.config = {}
     
@@ -77,7 +76,15 @@ class Engine(object):
       })
     
     exec self.source.read(self.createHandle('site-config')) in self.config
-    self.sink.configure(self.source, self.config, self)
+    
+    # configure sink for client
+    sink = self.config['TARGET']
+    uri = urlparse.urlparse(sink)
+    config['sink.uri'] = uri
+    try:
+      self.sink = jink.extension.sink.get(uri.scheme).instantiate(uri, self)
+    except KeyError, e:
+      raise Exception("unrecognized sink protocol '%s'" % uri.scheme)
     
     def doload(tmpl):
       try:
