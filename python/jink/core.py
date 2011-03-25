@@ -28,9 +28,9 @@ class Handle(object):
     """
     parts = collections.deque()
     for p in target.split('/'):
-      if (p is '' or p is '.') and len(parts) > 0:
+      if (p == '' or p == '.') and len(parts) > 0:
         pass
-      elif p is '..' and len(parts) > 0:
+      elif p == '..' and len(parts) > 0:
         parts.pop()
       else:
         parts.append(p)
