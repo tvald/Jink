@@ -148,6 +148,8 @@ class RuntimeContext(object):
 
   def createEngine(self):
     """ Creates the Jink engine which controls rendering. """
+    if self.engine: return self.engine
+    
     # Search up the filesystem hierarchy to locate the repository root.
     cwd = os.path.abspath(os.getcwd())
     root = cwd
