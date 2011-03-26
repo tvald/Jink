@@ -73,6 +73,7 @@ class Engine(object):
       'render': lambda x: (re.compile(x), 'render'),
       'ignore': lambda x: (re.compile(x), 'ignore'),
       'template': lambda x, y: (re.compile(x), y),
+      'plugin': self.plugin,
       })
     
     exec self.source.read(self.createHandle('site-config')) in self.config
