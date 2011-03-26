@@ -1,8 +1,8 @@
 
 
 class ISource(object):
-  def __init__(self, uri):
-    raise NotImplementedError('ISource.__init__(uri)')
+  def __init__(self, uri, context):
+    raise NotImplementedError('ISource.__init__(uri, context)')
   
   def iter_all(self, context):
     raise NotImplementedError('ISource.iter_all(context)')

@@ -12,14 +12,14 @@ jink.extension.sink.register(
 
 def Jink(source, config):
   # configure source for client
-  if type(source) is str:
-    uri = urlparse.urlparse(source)
-    config['source.uri'] = uri
-    try:
-      source = jink.extension.source.get(uri.scheme).instantiate(uri)
-    except KeyError, e:
-      raise Exception("unrecognized source protocol '%s'" % uri.scheme)
+  uri = urlparse.urlparse(source)
+  config['source.uri'] = uri
+  try:
+    def src_factory(engine):
+      return jink.extension.source.get(uri.scheme).instantiate(uri, engine)
+  except KeyError, e:
+    raise Exception("unrecognized source protocol '%s'" % uri.scheme)
   
-  return jink.core.Engine(source, config)
+  return jink.core.Engine(src_factory, config)
 
 __all__ = ['Jink']

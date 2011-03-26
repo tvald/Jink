@@ -62,8 +62,8 @@ class Handle(object):
 
 
 class Engine(object):
-  def __init__(self, source, config):
-    self.source = source
+  def __init__(self, source_factory, config):
+    self.source = source_factory(self)
     self.plugin = jink.plugin.PluginManager(self)
     self.config = {}
     

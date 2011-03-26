@@ -6,7 +6,7 @@ FS_TAG = '_FS_'
 
   
 class SourceFS(jink.prototype.ISource):
-  def __init__(self, path_or_uri):
+  def __init__(self, path_or_uri, context):
     if isinstance(path_or_uri, types.StringTypes):
       self.root = path_or_uri
     else:
@@ -15,7 +15,7 @@ class SourceFS(jink.prototype.ISource):
         if uri.netloc is not '':
           raise Exception('file:// protocol must have empty network location')
       self.root = uri.path
-      
+    self.context = context
   
   def locate(self, handle):
     tag = handle.tag
@@ -41,12 +41,12 @@ class SourceFS(jink.prototype.ISource):
     
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
-      self.log(1, '   creating directory: ' + dir)
-      if not self.trial:
+      self.context.log(1, '   creating directory: ' + dir)
+      if not self.context.config.get('trial-run', False):
         os.makedirs(dir)
     
-    self.log(1, '   write: ' + path)
-    if not self.trial:
+    self.context.log(1, '   write: ' + path)
+    if not self.context.config.get('trial-run', False):
       with open(path,'w') as f:
         f.write(data)
 
@@ -55,8 +55,7 @@ class SinkFS(jink.prototype.ISink):
   def __init__(self, uri, context):
     self.root = context.source.locate(
       context.createHandle(uri.path, tag=FS_TAG))
-    self.trial = context.config.get('trial-run', False)
-    self.log = context.log
+    self.context = context
   
   def locate(self, handle):
     if handle.tag != 'content':
@@ -65,8 +64,9 @@ class SinkFS(jink.prototype.ISink):
   
   def clean(self):
     if os.path.exists(self.root):
-      self.log(1, '  cleaning target [%s]' % self.root)
-      if self.trial: return
+      self.context.log(1, '  cleaning target [%s]' % self.root)
+      if self.context.config.get('trial-run', False):
+        return
       
       import shutil
       for x in os.listdir(self.root):
@@ -83,11 +83,11 @@ class SinkFS(jink.prototype.ISink):
     
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
-      self.log(1, '   creating directory: ' + dir)
-      if not self.trial:
+      self.context.log(1, '   creating directory: ' + dir)
+      if not self.context.config.get('trial-run', False):
         os.makedirs(dir)
     
-    self.log(1, '   write: ' + path)
-    if not self.trial:
+    self.context.log(1, '   write: ' + path)
+    if not self.context.config.get('trial-run', False):
       with open(path,'w') as f:
         f.write(data)
