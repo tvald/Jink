@@ -18,18 +18,23 @@ import sys; sys.path.append(JINK_PATH)
 import jink
 J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
 
+import hashlib
 
 def compose_url(action, target):
-  return '?action=%s&target=%s' % (action, target)
+  return '?action=%s&target=%s&checksum=%s' % (action, target, checksum)
 
 
 ## actions
+action = 'error'
 data = None
+checksum = ''
+
 def edit():
-  global ERROR_MSG, data
+  global ERROR_MSG, data, checksum
   if not data:
     try:
       data = cgi.escape(J.source.read( TARGET_HANDLE ))
+      checksum = hashlib.md5(data).hexdigest()
     except Exception, e:
       ERROR_MSG = 'Error: unable to open target.'
       error()
@@ -95,12 +100,39 @@ def submit():
   
   try:
     try:
-      J.source.update( TARGET_HANDLE , data )
+      _checksum = hashlib.md5(cgi.escape(J.source.read( TARGET_HANDLE ))).hexdigest()
     except Exception, e:
       ERROR_MSG = 'Error: unable to open target.<br>'+str(e)
       error()
       edit()
       return
+    
+    if checksum != _checksum:
+      ERROR_MSG = 'Error: this file has changed. Please reload the page to continue editing.'
+      error()
+      edit()
+      return
+    
+    _checksum = hashlib.md5(cgi.escape(data)).hexdigest()
+    
+    if checksum != _checksum:
+      # new data submitted, so update the file
+      try:
+        J.source.update( TARGET_HANDLE , data )
+      except Exception, e:
+        ERROR_MSG = 'Error: unable to open target.<br>'+str(e)
+        error()
+        edit()
+        return
+      
+      try:
+        import jink.plugin
+        J.plugin.dispatch(jink.plugin.Event('onAfterCGIUpdate', J, handle=TARGET_HANDLE))
+      except Exception, e:
+        ERROR_MSG = 'Error: cgi update hook died unexpectedly.<br>'+str(e)
+        error()
+        edit()
+        return
     
     try:
       J.build( TARGET_HANDLE )
@@ -142,6 +174,8 @@ if 'target' in form:
   TARGET_HANDLE = J.createHandle('content/'+TARGET)
   try:
     J.sink.locate( TARGET_HANDLE )  # security check
+    if 'checksum' in form:
+      checksum = form.getfirst('checksum')
     if 'action' in form:
       ACTION = form.getfirst('action').lower()
   except Exception, e:
