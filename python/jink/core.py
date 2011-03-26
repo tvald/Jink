@@ -123,6 +123,11 @@ class Engine(object):
     if handle.tag != 'content':
       raise Exception('cannot build non-content target "%s"' % handle)
     
+    evt = self.plugin.dispatch(jink.plugin.Event(
+        'onBeforeBuild', self, handle=handle), permit_cancel=True)
+    if evt.isCancelled(): return
+    handle = evt.extra.handle
+    
     # filter cascade
     action = self._filter(handle.ref, self.filters, 'ignore')
     
@@ -137,8 +142,13 @@ class Engine(object):
                                            self.source.read(handle)))
     elif action == None:
       self.log(1, 'WARNING: No action specified for "%s"...' % handle)
+      return
     else:
       self.log(1, 'WARNING: Unknown action [%s] on "%s"...' % (action, handle))
+      return
+    
+    self.plugin.dispatch(jink.plugin.Event(
+        'onAfterBuild', self, action=action, handle=handle))
   
   
   def _filter(self, data, filters, default = None):
