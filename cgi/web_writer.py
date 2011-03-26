@@ -56,7 +56,7 @@ def submit():
   data = form.getfirst('text').replace( '\r', '' )
 
   def callback(evt):
-    evt.args[1] = data
+    evt.extra.data = data
   
   try:
     J.plugin.register('onBeforeRender', callback)

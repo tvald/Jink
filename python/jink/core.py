@@ -64,7 +64,7 @@ class Handle(object):
 class Engine(object):
   def __init__(self, source_factory, config):
     self.source = source_factory(self)
-    self.plugin = jink.plugin.PluginManager(self)
+    self.plugin = jink.plugin.PluginManager()
     self.config = {}
     
     self.config.update(config)
@@ -148,10 +148,15 @@ class Engine(object):
     return default
   
   
-  @jink.plugin.api_prehook('onBeforeRender',
-                           permit_argmod=True, permit_cancel=True)
   def _render(self, f_target, data):
     """ render template to text """
+    
+    evt = self.plugin.dispatch(
+      jink.plugin.Event('onBeforeRender', self, data=data, target=f_target),
+      permit_cancel=True)
+    if evt.isCancelled(): return
+    data = evt.extra.data
+    f_target = evt.extra.target
     
     # check if inheritance is specified
     refs = jinja2.meta.find_referenced_templates(self.engine.parse(data))
