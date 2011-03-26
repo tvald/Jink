@@ -20,14 +20,11 @@ J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
 
 import hashlib
 
-def compose_url(action, target):
-  return '?target=%s&checksum=%s' % (target, checksum)
+def compose_url():
+  return '?target=%s&checksum=%s&return=%s' % (TARGET, checksum, return_url)
 
 
 ## actions
-data = None
-checksum = ''
-
 def edit():
   global ERROR_MSG, data, checksum
   if not data:
@@ -39,7 +36,7 @@ def edit():
       error()
       return
   
-  print "<form action='"+compose_url('submit',TARGET)+"' method='post'>"
+  print "<form action='"+compose_url()+"' method='post'>"
   print "<div>"
   print "<code>"+TARGET+"</code>"
   print "<input style='float:right' type='submit' value='Submit Changes'>"
@@ -144,7 +141,8 @@ def submit():
     os.remove('.jink.cgi.lock')
   
   print "<div><b>Job submitted!</b><br>"
-  print "<a href="+compose_url('edit',TARGET)+">continue editing</a><br>"
+  print "<a href="+compose_url()+">continue editing</a><br>"
+  print "<a href="+return_url+">return</a><br>"
   print "</div>"
 
 
@@ -164,17 +162,19 @@ ACTION_MAP = defaultdict(lambda:error,
   submit = submit,
   error = error
 )
-ACTION = (os.environ.get('REQUEST_METHOD', 'GET') == 'POST') and 'submit' or 'edit'
-
 
 form = cgi.FieldStorage()
+
+ACTION = (os.environ.get('REQUEST_METHOD', 'GET') == 'POST') and 'submit' or 'edit'
+data = None
+checksum = form.getfirst('checksum', '')
+return_url = form.getfirst('return', '')
+
 if 'target' in form:
   TARGET = form.getfirst('target')
   TARGET_HANDLE = J.createHandle('content/'+TARGET)
   try:
     J.sink.locate( TARGET_HANDLE )  # security check
-    if 'checksum' in form:
-      checksum = form.getfirst('checksum')
   except Exception, e:
     ACTION = 'error'
     ERROR_MSG = 'Error: invalid target.'
