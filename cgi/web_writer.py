@@ -69,21 +69,48 @@ def submit():
   
   J.config.update({'trial-run':False})
   
-  try:
-    J.source.update( TARGET_HANDLE , data )
-  except Exception, e:
-    ERROR_MSG = 'Error: unable to open target.<br>'+str(e)
+  import time
+  locked = False
+  retries = 3
+  PID = str(os.getpid())
+  while retries > 0:
+    try:
+      with open('.jink.cgi.lock', 'a') as f:
+        f.write(PID+'\n')
+      with open('.jink.cgi.lock', 'r') as f:
+        if f.readlines()[0].strip() == PID:
+          locked = True
+          break
+    except Exception, e:
+      pass
+
+    retries -= 1
+    time.sleep(.3)
+
+  if not locked:
+    ERROR_MSG = 'Error: unable to obtain repo lock'
     error()
     edit()
     return
   
   try:
-    J.build( TARGET_HANDLE )
-  except Exception, e:
-    ERROR_MSG = 'Error: jink build failed<br>%s' % str(e)
-    error()
-    edit()
-    return
+    try:
+      J.source.update( TARGET_HANDLE , data )
+    except Exception, e:
+      ERROR_MSG = 'Error: unable to open target.<br>'+str(e)
+      error()
+      edit()
+      return
+    
+    try:
+      J.build( TARGET_HANDLE )
+    except Exception, e:
+      ERROR_MSG = 'Error: jink build failed<br>%s' % str(e)
+      error()
+      edit()
+      return
+  finally:
+    os.remove('.jink.cgi.lock')
   
   print "<div><b>Job submitted!</b><br>"
   print "<a href="+compose_url('edit',TARGET)+">continue editing</a><br>"
