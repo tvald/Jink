@@ -10,10 +10,13 @@ print
 JINK_PATH = '/path/to/jink/library'
 REPO_PATH = '/path/to/repo.jink'
 
-import os, os.path, sys
+import os, os.path
 REPO_PATH = os.path.abspath(REPO_PATH)
-sys.path.append(JINK_PATH)
 os.chdir(REPO_PATH)
+
+import sys; sys.path.append(JINK_PATH)
+import jink
+J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
 
 
 def compose_url(action, target):
@@ -26,8 +29,7 @@ def edit():
   global ERROR_MSG, data
   if not data:
     try:
-      J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
-      data = cgi.escape(J.source.read(J.createHandle(TARGET_HANDLE)))
+      data = cgi.escape(J.source.read( TARGET_HANDLE ))
     except Exception, e:
       ERROR_MSG = 'Error: unable to open target.'
       error()
@@ -53,32 +55,30 @@ def submit():
   
   data = form.getfirst('text').replace( '\r', '' )
 
-  import jink
   def callback(evt):
     evt.args[1] = data
   
   try:
-    J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
     J.plugin.register('onBeforeRender', callback)
-    H = J.createHandle(TARGET_HANDLE)
-    J.build( H )
+    J.build( TARGET_HANDLE )
   except Exception, e:
     ERROR_MSG = 'Error: jink test build failed<br>%s' % str(e)
     error()
     edit()
     return
   
+  J.config.update({'trial-run':False})
+  
   try:
-    J.update( H, data)
+    J.source.update( TARGET_HANDLE , data )
   except Exception, e:
-    ERROR_MSG = 'Error: unable to open target.'
+    ERROR_MSG = 'Error: unable to open target.<br>'+str(e)
     error()
     edit()
     return
   
   try:
-    J = jink.Jink( REPO_PATH, { 'quiet' : True } )
-    J.build(H)
+    J.build( TARGET_HANDLE )
   except Exception, e:
     ERROR_MSG = 'Error: jink build failed<br>%s' % str(e)
     error()
@@ -112,9 +112,14 @@ ACTION='edit'
 form = cgi.FieldStorage()
 if 'target' in form:
   TARGET = form.getfirst('target')
-  TARGET_HANDLE = 'content/'+TARGET
-  if 'action' in form:
-    ACTION = form.getfirst('action').lower()
+  TARGET_HANDLE = J.createHandle('content/'+TARGET)
+  try:
+    J.sink.locate( TARGET_HANDLE )  # security check
+    if 'action' in form:
+      ACTION = form.getfirst('action').lower()
+  except Exception, e:
+    ACTION = 'error'
+    ERROR_MSG = 'Error: invalid target.'
 else:
   ACTION = 'error'
   ERROR_MSG = 'Error: no target provided.'
