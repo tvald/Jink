@@ -21,11 +21,10 @@ J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
 import hashlib
 
 def compose_url(action, target):
-  return '?action=%s&target=%s&checksum=%s' % (action, target, checksum)
+  return '?target=%s&checksum=%s' % (target, checksum)
 
 
 ## actions
-action = 'error'
 data = None
 checksum = ''
 
@@ -165,7 +164,7 @@ ACTION_MAP = defaultdict(lambda:error,
   submit = submit,
   error = error
 )
-ACTION='edit'
+ACTION = (os.environ.get('REQUEST_METHOD', 'GET') == 'POST') and 'submit' or 'edit'
 
 
 form = cgi.FieldStorage()
@@ -176,8 +175,6 @@ if 'target' in form:
     J.sink.locate( TARGET_HANDLE )  # security check
     if 'checksum' in form:
       checksum = form.getfirst('checksum')
-    if 'action' in form:
-      ACTION = form.getfirst('action').lower()
   except Exception, e:
     ACTION = 'error'
     ERROR_MSG = 'Error: invalid target.'
