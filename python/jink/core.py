@@ -94,8 +94,11 @@ class Engine(object):
       except Exception, e:
         raise jinja2.TemplateNotFound(tmpl)
     
-    self.engine = jinja2.Environment(loader = jinja2.FunctionLoader(doload),
-                              trim_blocks=True)
+    self.engine = jinja2.Environment(
+      loader = jinja2.FunctionLoader(doload),
+      trim_blocks = True,
+      extensions = self.config.get('extensions',[])
+      )
     
     self.templates = self.config.get('TEMPLATES',[])
     self.tmpl_cache = {}
