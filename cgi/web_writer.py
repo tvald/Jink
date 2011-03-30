@@ -178,6 +178,16 @@ if 'target' in form:
   except Exception, e:
     ACTION = 'error'
     ERROR_MSG = 'Error: invalid target.'
+  
+  import subprocess
+  try:
+    ftype = subprocess.Popen(['/usr/bin/file', '-b', J.source.locate(TARGET_HANDLE)],
+                             stdout=subprocess.PIPE).communicate()[0]
+    if ftype.strip().split(' ')[-1] != 'text':
+      raise Exception('Invalid file type "%s".' % ftype)
+  except Exception, e:
+    ACTION = 'error'
+    ERROR_MSG = 'Error: target is not a text file.'
 else:
   ACTION = 'error'
   ERROR_MSG = 'Error: no target provided.'
