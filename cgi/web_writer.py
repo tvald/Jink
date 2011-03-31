@@ -1,199 +1,205 @@
 #!/usr/bin/python
 from __future__ import with_statement
+import cgi, cgitb; cgitb.enable()
 
-import cgi
-import cgitb; cgitb.enable()
-
+# send header so that cgitb can print an HTML stack trace if we goof
 print "Content-Type: text/html"
 print
 
+# config
 JINK_PATH = '/path/to/jink/library'
 REPO_PATH = '/path/to/repo.jink'
 
+# set up basic dependencies
 import os, os.path
 REPO_PATH = os.path.abspath(REPO_PATH)
-os.chdir(REPO_PATH)
+JINK_PATH = os.path.abspath(JINK_PATH)
 
 import sys; sys.path.append(JINK_PATH)
-import jink
-J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
 
-import hashlib
-
-def compose_url():
-  return '?target=%s&checksum=%s&return=%s' % (TARGET, checksum, return_url)
+# record errors
+errors = []
+def error(*msgs):
+  errors.extend(msgs)
 
 
-## actions
-def edit():
-  global ERROR_MSG, data, checksum
-  if not data:
-    try:
-      data = cgi.escape(J.source.read( TARGET_HANDLE ))
-      checksum = hashlib.md5(data).hexdigest()
-    except Exception, e:
-      ERROR_MSG = 'Error: unable to open target.'
-      error()
-      return
+# start doing complicated stuff that might fail
+try:
+  # load query string and form fields
+  form = cgi.FieldStorage()
+  return_url     = form.getfirst('return', None)
+  target         = form.getfirst('target', None)
+  form_data      = form.getfirst('data', None)
+  form_checksum  = form.getfirst('checksum', None)
+  submit_type    = form.getfirst('submit','Save')
   
-  print "<form action='"+compose_url()+"' method='post'>"
-  print "<div>"
-  print "<code>"+TARGET+"</code>"
-  print "<input style='float:right' type='submit' value='Submit Changes'>"
-  print "</div>"
-  print "<textarea name='text' rows='30' cols='80'>"
-  print data + "</textarea>"
-  print "</form>"
-
-
-def submit():
-  global ERROR_MSG, data
-  if 'text' not in form:
-    ERROR_MSG = 'Error: no text supplied.'
-    error()
-    edit()
-    return
+  URL_THIS_PAGE  = os.environ.get('REQUEST_URI', '#')
+  action         = (os.environ.get('REQUEST_METHOD', 'GET') == 'POST' and \
+                      submit_type != 'Reload File') and 'POST' or 'GET'
   
-  data = form.getfirst('text').replace( '\r', '' )
-
-  def callback(evt):
-    evt.extra.data = data
+  field_data     = form_data
+  field_checksum = form_checksum
   
+  target_checksum = None
+  target_data     = None
+  
+  TARGET_EXISTS = False
+  TARGET_ISTEXT = False
+  TARGET_FORCE  = False
+  
+  
+  # load libraries and access the repository
+  import hashlib, jink, subprocess
   try:
-    J.plugin.register('onBeforeRender', callback)
-    J.build( TARGET_HANDLE )
+    J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
   except Exception, e:
-    ERROR_MSG = 'Error: jink test build failed<br>%s' % str(e)
-    error()
-    edit()
-    return
+    error(str(e))
+    raise Exception('fatal: unable to access repo ['+REPO_PATH+']')
   
-  J.config.update({'trial-run':False})
   
-  import time
-  locked = False
-  retries = 3
-  PID = str(os.getpid())
-  while retries > 0:
-    try:
-      with open('.jink.cgi.lock', 'a') as f:
-        f.write(PID+'\n')
-      with open('.jink.cgi.lock', 'r') as f:
-        if f.readlines()[0].strip() == PID:
-          locked = True
-          break
-    except Exception, e:
-      pass
-
-    retries -= 1
-    time.sleep(.3)
-
-  if not locked:
-    ERROR_MSG = 'Error: unable to obtain repo lock'
-    error()
-    edit()
-    return
-  
+  # perform basic sanity checks
+  if target == None: raise Exception('fatal: no target specified')
+  target_handle = J.createHandle(target, tag='content')
   try:
+    J.sink.locate( target_handle )  # security check
+  except Exception, e:
+    raise Exception('fatal: invalid target')
+  
+  
+  # check the target
+  TARGET_EXISTS = os.path.exists( J.source.locate(target_handle) )
+  if TARGET_EXISTS:
+    # try to sniff file type
+    import subprocess
     try:
-      _checksum = hashlib.md5(cgi.escape(J.source.read( TARGET_HANDLE ))).hexdigest()
+      _ftype = subprocess.Popen(['/usr/bin/file', '-b', J.source.locate(target_handle)],
+                               stdout=subprocess.PIPE).communicate()[0]
     except Exception, e:
-      ERROR_MSG = 'Error: unable to open target.<br>'+str(e)
-      error()
-      edit()
-      return
+      error(str(e))
+      raise Exception('fatal: error while sniffing file type')
+    TARGET_ISTEXT = (_ftype.strip().split(' ')[-1] == 'text')
+    if not TARGET_ISTEXT: raise Exception('fatal: target is not a text file')
     
-    if checksum != _checksum:
-      ERROR_MSG = 'Error: this file has changed. Please reload the page to continue editing.'
-      error()
-      edit()
-      return
+    # calculate checksum so we know if file has changed
+    try:
+      target_data = cgi.escape( J.source.read( target_handle ) )
+    except Exception, e:
+      error(str(e))
+      raise Exception('fatal: unable to read target while calculating checksum')
+    target_checksum = hashlib.md5(target_data).hexdigest()
     
-    _checksum = hashlib.md5(cgi.escape(data)).hexdigest()
-    
-    if checksum != _checksum:
-      # new data submitted, so update the file
-      try:
-        J.source.update( TARGET_HANDLE , data )
-      except Exception, e:
-        ERROR_MSG = 'Error: unable to open target.<br>'+str(e)
-        error()
-        edit()
-        return
+    field_checksum = target_checksum
+    field_data     = target_data
+  
+  
+  if action == 'POST':
+    # validate submissions
+    if form_data == None:
+      raise Exception('fatal: no data received with POST')
+    else:
+      # fix up line endings
+      form_data = form_data.replace( '\r', '' )
       
+      # and reset data + checksum again
+      field_data     = form_data
+      field_checksum = form_checksum
+    
+    
+    # test submission before accepting
+    def renderCallback(evt): evt.extra.data = form_data
+    try:
+      J.plugin.register('onBeforeRender', renderCallback)
+      J.build( target_handle )
+    except Exception, e:
+      error(str(e))
+      raise Exception('fatal: jink test build failed')
+    
+    J.config.update({'trial-run':False})
+    
+    
+    # lock repository so our change doesn't hit problems
+    import time
+    lockfile = J.source.locate(J.createHandle('.jink.cgi.lock'))
+    locked   = False
+    retries  = 3
+    while retries > 0 and not locked:
       try:
-        import jink.plugin
-        J.plugin.dispatch(jink.plugin.Event('onAfterCGIUpdate', J, handle=TARGET_HANDLE))
+        fd = os.open(lockfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+        locked = True
+        os.close(fd)
       except Exception, e:
-        ERROR_MSG = 'Error: cgi update hook died unexpectedly.<br>'+str(e)
-        error()
-        edit()
-        return
+        retries -= 1
+        time.sleep(.3)
+    
+    if not locked: raise Exception('fatal: unable to obtain repo lock ['+lockfile+']')
+    
     
     try:
-      J.build( TARGET_HANDLE )
-    except Exception, e:
-      ERROR_MSG = 'Error: jink build failed<br>%s' % str(e)
-      error()
-      edit()
-      return
-  finally:
-    os.remove('.jink.cgi.lock')
+      # TODO: case if !TARGET_ISTEXT
+      
+      # calculate checksum of submitted data so we can check against target
+      new_checksum = hashlib.md5(cgi.escape(form_data)).hexdigest()
+      
+      
+      # check if file has changed since we began editing
+      if not TARGET_EXISTS or submit_type == 'Overwrite File':
+        target_checksum = new_checksum  # skip check
+      else:
+        try:
+          # this is inefficient (we already calculated the checksum above)
+          # but we need to have the lock before calculating the checksum
+          target_checksum = hashlib.md5(cgi.escape(J.source.read( target_handle ))).hexdigest()
+        except Exception, e:
+          error(str(e))
+          raise Exception('fatal: unable to open target while calculating checksum (2)')
+        
+        if form_checksum != target_checksum:
+          TARGET_FORCE = True
+          raise Exception('Warning: this file has changed since you started editing it.')
+      
+      
+      # do the update
+      if new_checksum != form_checksum:
+        try:
+          J.source.update( target_handle , form_data )
+        except Exception, e:
+          error(str(e))
+          raise Exception('fatal: unable to open target for update')
+        
+        # successful, so update the checksum
+        field_checksum = new_checksum
+        
+        try:
+          import jink.plugin
+          J.plugin.dispatch(jink.plugin.Event('onAfterCGIUpdate', J, handle=target_handle))
+        except Exception, e:
+          error(str(e))
+          raise Exception('fatal: cgi update hook died unexpectedly')
+      
+      
+      # do a build, whether or not the file changed
+      try:
+        J.build( target_handle )
+      except Exception, e:
+        error(str(e))
+        raise Exception('fatal: jink build failed')
+    
+    finally:
+      # unlock the repository
+      os.remove(lockfile)
+    
+    
+    # record that the POST was successful
+    error("<b>Your changes have been saved!</b>")
   
-  print "<div><b>Job submitted!</b><br>"
-  print "<a href="+compose_url()+">continue editing</a><br>"
-  print "<a href="+return_url+">return</a><br>"
-  print "</div>"
-
-
-ERROR_MSG = False
-def error():
-  global ERROR_MSG
-  if not ERROR_MSG:
-    ERROR_MSG = "Whoops! We encountered an error while processing your request."
-  print "<div style='color:red'>"+ERROR_MSG+"</div>"
-
-
-
-# determine which action to perform
-from collections import defaultdict
-ACTION_MAP = defaultdict(lambda:error,
-  edit = edit,
-  submit = submit,
-  error = error
-)
-
-form = cgi.FieldStorage()
-
-ACTION = (os.environ.get('REQUEST_METHOD', 'GET') == 'POST') and 'submit' or 'edit'
-data = None
-checksum = form.getfirst('checksum', '')
-return_url = form.getfirst('return', '')
-
-if 'target' in form:
-  TARGET = form.getfirst('target')
-  TARGET_HANDLE = J.createHandle('content/'+TARGET)
-  try:
-    J.sink.locate( TARGET_HANDLE )  # security check
-  except Exception, e:
-    ACTION = 'error'
-    ERROR_MSG = 'Error: invalid target.'
+  # no more processing left
   
-  import subprocess
-  try:
-    ftype = subprocess.Popen(['/usr/bin/file', '-b', J.source.locate(TARGET_HANDLE)],
-                             stdout=subprocess.PIPE).communicate()[0]
-    if ftype.strip().split(' ')[-1] != 'text':
-      raise Exception('Invalid file type "%s".' % ftype)
-  except Exception, e:
-    ACTION = 'error'
-    ERROR_MSG = 'Error: target is not a text file.'
-else:
-  ACTION = 'error'
-  ERROR_MSG = 'Error: no target provided.'
+# record any problems we encounter
+except Exception, e:
+  error(str(e))
 
 
-# print content
+# finally render page
 print """<!DOCTYPE html>
 <html>
 <head>
@@ -205,7 +211,33 @@ print """<!DOCTYPE html>
 </head>
 <body>"""
 
-ACTION_MAP[ACTION]()
+# render errors
+if len(errors) > 0:
+  errors.reverse()
+  print "<div style='color:red'>"+"<br>".join(errors)+"</div>"
+
+# render edit field
+if TARGET_EXISTS and TARGET_ISTEXT:
+  if return_url:
+    print "<form action='"+URL_THIS_PAGE+"' method='post'><div><a href='" + return_url + "'>" + target + "</a>"
+  else:
+    print "<form action='"+URL_THIS_PAGE+"' method='post'><div>" + target
+  print "<input type='hidden' name='checksum' value='" + field_checksum + "'>"
+  if TARGET_FORCE:
+    print "<input style='float:right' type='submit' name='submit' value='Overwrite File'>"
+    print "<input style='float:right' type='submit' name='submit' value='Reload File'>"
+  else:
+    print "<input style='float:right' type='submit' name='submit' value='Save Changes'>"
+  print "</div><textarea name='data' rows='30' cols='80'>" + field_data + "</textarea></form>"
+  
+elif not TARGET_EXISTS and target:
+  print "<div style='color:green'>Note: this page does not yet exist.</div>"
+  if return_url:
+    print "<form action='"+URL_THIS_PAGE+"' method='post'><div><a href='" + return_url + "'>" + target + "</a>"
+  else:
+    print "<form action='"+URL_THIS_PAGE+"' method='post'><div>" + target
+  print "<input style='float:right' type='submit' name='submit' value='Create Page'>"
+  print "</div><textarea name='data' rows='30' cols='80'></textarea></form>"
 
 print "</body></html>"
 
