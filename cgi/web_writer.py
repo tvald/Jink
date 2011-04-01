@@ -19,8 +19,8 @@ import sys; sys.path.append(JINK_PATH)
 
 # record errors
 errors = []
-def error(*msgs):
-  errors.extend(msgs)
+def error(*msgs, **kw):
+  errors.extend(map(lambda m: '<span style="color:%s">%s</span>' % (kw.get('color','red'),cgi.escape(m)), msgs))
 
 
 # start doing complicated stuff that might fail
@@ -72,13 +72,13 @@ try:
     # try to sniff file type
     import subprocess
     try:
-      _ftype = subprocess.Popen(['/usr/bin/file', '-b', J.source.locate(target_handle)],
+      _ftype = subprocess.Popen(['/usr/bin/file', '-bi', J.source.locate(target_handle)],
                                stdout=subprocess.PIPE).communicate()[0]
     except Exception, e:
       error(str(e))
       raise Exception('fatal: error while sniffing file type')
-    TARGET_ISTEXT = (_ftype.strip().split(' ')[-1] == 'text')
-    if not TARGET_ISTEXT: raise Exception('fatal: target is not a text file')
+    TARGET_ISTEXT = _ftype.startswith('text')
+    if not TARGET_ISTEXT: raise Exception('fatal: target is not a text file ['+_ftype+']')
     
     # calculate checksum so we know if file has changed
     try:
@@ -106,15 +106,16 @@ try:
     
     
     # test submission before accepting
-    def renderCallback(evt): evt.extra.data = form_data
+    _read = J.source.read
+    J.source.read = lambda h: (h == target_handle and form_data or _read(h))
     try:
-      J.plugin.register('onBeforeRender', renderCallback)
       J.build( target_handle )
     except Exception, e:
       error(str(e))
       raise Exception('fatal: jink test build failed')
     
     J.config.update({'trial-run':False})
+    J.source.read = _read
     
     
     # lock repository so our change doesn't hit problems
@@ -168,6 +169,8 @@ try:
         
         # successful, so update the checksum
         field_checksum = new_checksum
+        TARGET_EXISTS = True
+        TARGET_ISTEXT = True
         
         try:
           import jink.plugin
@@ -190,7 +193,7 @@ try:
     
     
     # record that the POST was successful
-    error("<b>Your changes have been saved!</b>")
+    error('Your changes have been saved!', color='green')
   
   # no more processing left
   
@@ -237,7 +240,10 @@ elif not TARGET_EXISTS and target:
   else:
     print "<form action='"+URL_THIS_PAGE+"' method='post'><div>" + target
   print "<input style='float:right' type='submit' name='submit' value='Create Page'>"
-  print "</div><textarea name='data' rows='30' cols='80'></textarea></form>"
+  if field_data != None:
+    print "</div><textarea name='data' rows='30' cols='80'>" + field_data + "</textarea></form>"
+  else:
+    print "</div><textarea name='data' rows='30' cols='80'></textarea></form>"
 
 print "</body></html>"
 
