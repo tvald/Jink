@@ -101,11 +101,11 @@ class RuntimeContext(object):
     for x in sysargs:
       # all flags are assumed to be of the form '-flag'
       if x.startswith('--'):
-        self.flags[x[2:]] = True
+        self.flags['flag.'+x[2:]] = True
       elif x.startswith('-'):
         if x[1:] not in flag_map:
           die("unrecognized flag '%s'" % x)
-        self.flags[flag_map[x[1:]]] = True
+        self.flags['flag.'+flag_map[x[1:]]] = True
       # everything else is an argument
       else:
         self.args.append(x)

@@ -1,7 +1,7 @@
 from __future__ import with_statement
 import re, os, os.path
 
-import jink.plugin, jink.extension
+import jink.plugin, jink.extension, jink.config
 import jinja2, jinja2.meta
 import collections, urlparse
 
@@ -65,23 +65,16 @@ class Engine(object):
   def __init__(self, source_factory, config):
     self.source = source_factory(self)
     self.plugin = jink.plugin.PluginManager()
-    self.config = {}
+    self.config = jink.config.Config(config)
     
-    self.config.update(config)
-    self.config.update({
-      'copy':   lambda x: (re.compile(x), 'copy'),
-      'render': lambda x: (re.compile(x), 'render'),
-      'ignore': lambda x: (re.compile(x), 'ignore'),
-      'template': lambda x, y: (re.compile(x), y),
-      'plugin': self.plugin,
-      })
-    
-    exec self.source.read(self.createHandle('site-config')) in self.config
+    exec self.source.read(self.createHandle('site-config')) in \
+        {'config':self.config}
     
     # configure sink for client
-    sink = self.config['TARGET']
+    sink = self.config.get('build.target')
+    
     uri = urlparse.urlparse(sink)
-    config['sink.uri'] = uri
+    self.config.set('sink.uri', uri)
     try:
       self.sink = jink.extension.sink.get(uri.scheme).instantiate(uri, self)
     except KeyError, e:
@@ -100,14 +93,16 @@ class Engine(object):
       extensions = self.config.get('extensions',[])
       )
     
-    self.templates = self.config.get('TEMPLATES',[])
+    self.templates = map(lambda x: (re.compile(x[0]),x[1]),\
+                         self.config.get('build.templates',[]))
     self.tmpl_cache = {}
-    self.filters = self.config.get('FILTERS',[])
+    self.filters = map(lambda x: (re.compile(x[0]),x[1]),\
+                         self.config.get('build.rules',[]))
     
     self.log_level = 1
-    if self.config.get('verbose',False):
+    if self.config.get('flag.verbose',False):
       self.log_level += 1
-    if self.config.get('quiet',False):
+    if self.config.get('flag.quiet',False):
       self.log_level -= 1
   
   

@@ -41,14 +41,16 @@ def init(path):
 
 
 ## DATA ##
-DEFAULT_CONFIG="""TARGET_changeme = 'path/to/target'
-TEMPLATES = [
-  template(r'.*\.html','master.tmpl')
-  ]
-FILTERS = [
-  render(r'.*\.html'),
-  copy(r'.*')
-  ]
+DEFAULT_CONFIG="""config.set({
+ 'build.target' : 'path/to/target', # CHANGE ME
+ 'build.template.rules' : [
+   ( r'.*\.html' , 'master.tmpl' ),
+ ],
+ 'build.rules' : [
+   (r'.*\.html', 'render'),
+   (r'.*', 'copy')
+ ],
+})
 """
 
 
