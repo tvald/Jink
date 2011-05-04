@@ -15,6 +15,11 @@ class Config(object):
       self.settings[key] = [old]
     self.settings[key].append(value)
   
+  def clone(self, *args, **kw):
+    x = dict(self.settings)
+    for d in args: x.update(d)
+    x.update(kw)
+    return x
   
   def get(self, key, parse, default=None):
     return parse(self.settings.get(key, default))

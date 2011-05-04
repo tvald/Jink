@@ -177,7 +177,7 @@ class Engine(object):
       if t: data = ( '{%% extends "%s" %%}\n' % t ) + data
     
     # render
-    data = self.engine.from_string(data).render(dict(path = f_target))
+    data = self.engine.from_string(data).render({ 'config' : self.config.clone({ 'jink.path' : f_target}).get })
     self.log(2, '------------------------------')
     self.log(2, data)
     self.log(2, '------------------------------')

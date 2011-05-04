@@ -29,6 +29,9 @@ def init(path):
   with open(os.path.join(repopath,'templates','master.tmpl'),'w') as f:
     f.write(MASTER_TMPL)
   
+  with open(os.path.join(repopath,'templates','html5.tmpl'),'w') as f:
+    f.write(HTML5_TMPL)
+  
   print 'Writing default content...'
   with open(os.path.join(repopath,'content','index.html'),'w') as f:
     f.write(INDEX_HTML)
@@ -50,21 +53,31 @@ DEFAULT_CONFIG="""config.set({
    (r'.*\.html', 'render'),
    (r'.*', 'copy')
  ],
+ 'site.url.base' : '/'
 })
 """
 
-
-MASTER_TMPL="""<!DOCTYPE HTML>
+HTML5_TMPL="""<!DOCTYPE html>
 <html>
-<head>
-<title>Jink demo page!</title>
-</head>
-<body>
-{% block content %}
-Hmm... templating seems to have failed.
-{% endblock %}
-</body>
+  <head>
+  <meta charset="US-ASCII">
+  {% block htmlhead %}{{ '<title>%s</title>' % title if title is defined }}{% endblock %}
+  </head>
+  <body>
+  {% block htmlbody %}{% endblock %}
+  </body>
 </html>
+"""
+
+MASTER_TMPL="""{% extends "html5.tmpl" %}
+{% set title = 'Jink demo page!' %}
+{% macro page_url(txt)  %}{{ [config('site.url.base'),txt]|join('/') }}{% endmacro %}
+
+{% block htmlbody %}
+{% block content %}
+Whoops! Templating seems to have failed...
+{% endblock %}
+{% endblock htmlbody %}
 """
 
 INDEX_HTML="""{% extends "master.tmpl" %}
