@@ -1,0 +1,3 @@
+RewriteEngine on
+RewriteRule ^www/edit$ /www-cgi/edit.py?target=index.html&return=/www [R,L]
+RewriteRule ^(www/(.*))/edit$ /www-cgi/edit.py?target=$2&return=/$1 [R,L]

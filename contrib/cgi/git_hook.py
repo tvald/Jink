@@ -1,3 +1,8 @@
+# to enable, put these lines in site-config:
+#import sys; sys.path.append('path/to/this/file')
+#from git_hook import create_git_hook
+#plugin.register('onAfterCGIUpdate', create_git_hook('Web User <admin@%foo%.com>','edited via cgi script'))
+
 def create_git_hook(author, message):
   def git_hook(evt):
     import subprocess, os
