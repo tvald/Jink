@@ -68,7 +68,7 @@ class Engine(object):
     self.config = jink.config.Config(config)
     
     exec self.source.read(self.createHandle('site-config')) in \
-        {'config':self.config}
+        {'config':self.config, 'plugin':self.plugin}
     
     # configure sink for client
     sink = self.config.get('build.target')
