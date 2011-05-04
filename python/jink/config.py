@@ -9,12 +9,30 @@ class Config(object):
     else:
       self.settings[key_or_dict] = value_or_none
   
-  def get(self, key, default=None):
-    return self.settings.get(key, default)
-  
   def append(self, key, value):
     old = self.settings.setdefault(key, None)
     if type(old) != list:
       self.settings[key] = [old]
     self.settings[key].append(value)
-
+  
+  
+  def get(self, key, parse, default=None):
+    return parse(self.settings.get(key, default))
+  
+  def getStr(self, key, default=None):
+    return self.get(key, str, default)
+  
+  def getBool(self, key, default=None):
+    return self.get(key, lambda x: bool(x) and str(x).lower() != 'false', default)
+  
+  def getInt(self, key, default=None):
+    return self.get(key, int, default)
+  
+  def getFloat(self, key, default=None):
+    return self.get(key, float, default)
+  
+  def getList(self, key, default=None):
+    return self.get(key, list, default)
+  
+  def getObj(self, key, default=None):
+    return self.get(key, lambda x: x, default)

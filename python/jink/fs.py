@@ -42,11 +42,11 @@ class SourceFS(jink.prototype.ISource):
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
       self.context.log(1, '   creating directory: ' + dir)
-      if not self.context.config.get('flag.trial-run', False):
+      if not self.context.config.getBool('flag.trial-run', False):
         os.makedirs(dir)
     
     self.context.log(1, '   write: ' + path)
-    if not self.context.config.get('flag.trial-run', False):
+    if not self.context.config.getBool('flag.trial-run', False):
       with open(path,'w') as f:
         f.write(data)
 
@@ -65,7 +65,7 @@ class SinkFS(jink.prototype.ISink):
   def clean(self):
     if os.path.exists(self.root):
       self.context.log(1, '  cleaning target [%s]' % self.root)
-      if self.context.config.get('flag.trial-run', False):
+      if self.context.config.getBool('flag.trial-run', False):
         return
       
       import shutil
@@ -84,10 +84,10 @@ class SinkFS(jink.prototype.ISink):
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
       self.context.log(1, '   creating directory: ' + dir)
-      if not self.context.config.get('flag.trial-run', False):
+      if not self.context.config.getBool('flag.trial-run', False):
         os.makedirs(dir)
     
     self.context.log(1, '   write: ' + path)
-    if not self.context.config.get('flag.trial-run', False):
+    if not self.context.config.getBool('flag.trial-run', False):
       with open(path,'w') as f:
         f.write(data)

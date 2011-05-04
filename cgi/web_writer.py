@@ -51,7 +51,7 @@ try:
   # load libraries and access the repository
   import hashlib, jink, subprocess
   try:
-    J = jink.Jink( REPO_PATH, { 'trial-run' : True, 'quiet' : True } )
+    J = jink.Jink( REPO_PATH, { 'flag.trial-run' : True, 'flag.quiet' : True } )
   except Exception, e:
     error(str(e))
     raise Exception('fatal: unable to access repo ['+REPO_PATH+']')
@@ -114,7 +114,7 @@ try:
       error(str(e))
       raise Exception('fatal: jink test build failed')
     
-    J.config.update({'trial-run':False})
+    J.config.set('flag.trial-run','False'})
     J.source.read = _read
     
     

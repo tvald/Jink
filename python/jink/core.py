@@ -71,7 +71,7 @@ class Engine(object):
         {'config':self.config, 'plugin':self.plugin}
     
     # configure sink for client
-    sink = self.config.get('build.target')
+    sink = self.config.getStr('build.target')
     
     uri = urlparse.urlparse(sink)
     self.config.set('sink.uri', uri)
@@ -90,19 +90,19 @@ class Engine(object):
     self.engine = jinja2.Environment(
       loader = jinja2.FunctionLoader(doload),
       trim_blocks = True,
-      extensions = self.config.get('extensions',[])
+      extensions = self.config.getList('extensions',[])
       )
     
     self.templates = map(lambda x: (re.compile(x[0]),x[1]),\
-                         self.config.get('build.templates',[]))
+                         self.config.getList('build.templates',[]))
     self.tmpl_cache = {}
     self.filters = map(lambda x: (re.compile(x[0]),x[1]),\
-                         self.config.get('build.rules',[]))
+                         self.config.getList('build.rules',[]))
     
     self.log_level = 1
-    if self.config.get('flag.verbose',False):
+    if self.config.getBool('flag.verbose',False):
       self.log_level += 1
-    if self.config.get('flag.quiet',False):
+    if self.config.getBool('flag.quiet',False):
       self.log_level -= 1
   
   
