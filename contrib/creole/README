@@ -1,0 +1,9 @@
+To enable this extension, place these lines in site-config:
+
+import sys; sys.path.append('path/to/contrib')
+config.append('extensions', 'creole.ext.CreoleMarkupExtension');
+
+This will enable a new tag, {% wiki %}...{% endwiki %}, which
+provides the Creole markup syntax.  For documentation of Creole,
+see http://www.wikicreole.org/wiki/CheatSheet
+

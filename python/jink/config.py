@@ -9,11 +9,11 @@ class Config(object):
     else:
       self.settings[key_or_dict] = value_or_none
   
-  def append(self, key, value):
-    old = self.settings.setdefault(key, None)
+  def append(self, key, values*):
+    old = self.settings.get(key, None)
     if type(old) != list:
-      self.settings[key] = [old]
-    self.settings[key].append(value)
+      self.settings[key] = (old != None) and [old] or []
+    self.settings[key].extend(values)
   
   def clone(self, *args, **kw):
     x = dict(self.settings)
