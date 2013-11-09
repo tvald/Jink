@@ -46,7 +46,7 @@ def init(path):
 ## DATA ##
 DEFAULT_CONFIG="""config.set({
  'build.target' : 'path/to/target', # CHANGE ME
- 'build.template.rules' : [
+ 'build.templates' : [
    ( r'.*\.html' , 'master.tmpl' ),
  ],
  'build.rules' : [

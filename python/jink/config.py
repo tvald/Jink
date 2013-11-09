@@ -9,7 +9,7 @@ class Config(object):
     else:
       self.settings[key_or_dict] = value_or_none
   
-  def append(self, key, values*):
+  def append(self, key, *values):
     old = self.settings.get(key, None)
     if type(old) != list:
       self.settings[key] = (old != None) and [old] or []
